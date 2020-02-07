@@ -591,6 +591,8 @@ static int nuc970_spi0_probe(struct platform_device *pdev)
 	int err = 0;
 	struct pinctrl *p;
 
+	dev_dbg(&pdev->dev, "nuc970_spi0_probe: %s\n", pdev->name);
+
 	master = spi_alloc_master(&pdev->dev, sizeof(struct nuc970_spi));
 	if (master == NULL) {
 		dev_err(&pdev->dev, "No memory for spi_master\n");

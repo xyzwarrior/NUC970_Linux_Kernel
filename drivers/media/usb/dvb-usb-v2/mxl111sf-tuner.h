@@ -1,7 +1,7 @@
 /*
  *  mxl111sf-tuner.h - driver for the MaxLinear MXL111SF CMOS tuner
  *
- *  Copyright (C) 2010 Michael Krufky <mkrufky@kernellabs.com>
+ *  Copyright (C) 2010-2014 Michael Krufky <mkrufky@linuxtv.org>
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -77,12 +77,3 @@ struct dvb_frontend *mxl111sf_tuner_attach(struct dvb_frontend *fe,
 #endif
 
 #endif /* __MXL111SF_TUNER_H__ */
-
-/*
- * Overrides for Emacs so that we follow Linus's tabbing style.
- * ---------------------------------------------------------------------------
- * Local variables:
- * c-basic-offset: 8
- * End:
- */
-

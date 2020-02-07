@@ -17,13 +17,13 @@
 #include <linux/fs.h>
 #include <linux/kref.h>
 #include <linux/utsname.h>
-#include <linux/nfsd/nfsfh.h>
 #include <linux/lockd/bind.h>
 #include <linux/lockd/xdr.h>
 #ifdef CONFIG_LOCKD_V4
 #include <linux/lockd/xdr4.h>
 #endif
 #include <linux/lockd/debug.h>
+#include <linux/sunrpc/svc.h>
 
 /*
  * Version string
@@ -68,6 +68,7 @@ struct nlm_host {
 	struct nsm_handle	*h_nsmhandle;	/* NSM status handle */
 	char			*h_addrbuf;	/* address eyecatcher */
 	struct net		*net;		/* host net */
+	char			nodename[UNX_MAXNODENAME + 1];
 };
 
 /*
@@ -178,7 +179,6 @@ struct nlm_block {
 	unsigned char		b_granted;	/* VFS granted lock */
 	struct nlm_file *	b_file;		/* file in question */
 	struct cache_req *	b_cache_req;	/* deferred request handling */
-	struct file_lock *	b_fl;		/* set for GETLK */
 	struct cache_deferred_req * b_deferred_req;
 	unsigned int		b_flags;	/* block flags */
 #define B_QUEUED		1	/* lock queued */
@@ -355,8 +355,7 @@ static inline int nlm_privileged_requester(const struct svc_rqst *rqstp)
 static inline int nlm_compare_locks(const struct file_lock *fl1,
 				    const struct file_lock *fl2)
 {
-	return file_inode(fl1->fl_file) == file_inode(fl2->fl_file)
-	     && fl1->fl_pid   == fl2->fl_pid
+	return	fl1->fl_pid   == fl2->fl_pid
 	     && fl1->fl_owner == fl2->fl_owner
 	     && fl1->fl_start == fl2->fl_start
 	     && fl1->fl_end   == fl2->fl_end

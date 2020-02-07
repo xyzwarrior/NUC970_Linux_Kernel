@@ -8,8 +8,7 @@
  */
 #include <linux/vga_switcheroo.h>
 #include <linux/slab.h>
-#include <acpi/acpi.h>
-#include <acpi/acpi_bus.h>
+#include <linux/acpi.h>
 #include <linux/pci.h>
 #include <linux/delay.h>
 
@@ -59,6 +58,10 @@ struct atpx_mux {
 	u16 size;
 	u16 mux;
 } __packed;
+
+bool radeon_has_atpx(void) {
+	return radeon_atpx_priv.atpx_detected;
+}
 
 /**
  * radeon_atpx_call - call an ATPX method
@@ -449,7 +452,7 @@ static bool radeon_atpx_pci_probe_handle(struct pci_dev *pdev)
 	acpi_handle dhandle, atpx_handle;
 	acpi_status status;
 
-	dhandle = DEVICE_ACPI_HANDLE(&pdev->dev);
+	dhandle = ACPI_HANDLE(&pdev->dev);
 	if (!dhandle)
 		return false;
 
@@ -495,13 +498,13 @@ static int radeon_atpx_init(void)
  */
 static int radeon_atpx_get_client_id(struct pci_dev *pdev)
 {
-	if (radeon_atpx_priv.dhandle == DEVICE_ACPI_HANDLE(&pdev->dev))
+	if (radeon_atpx_priv.dhandle == ACPI_HANDLE(&pdev->dev))
 		return VGA_SWITCHEROO_IGD;
 	else
 		return VGA_SWITCHEROO_DIS;
 }
 
-static struct vga_switcheroo_handler radeon_atpx_handler = {
+static const struct vga_switcheroo_handler radeon_atpx_handler = {
 	.switchto = radeon_atpx_switchto,
 	.power_state = radeon_atpx_power_state,
 	.init = radeon_atpx_init,
@@ -537,7 +540,7 @@ static bool radeon_atpx_detect(void)
 
 	if (has_atpx && vga_count == 2) {
 		acpi_get_name(radeon_atpx_priv.atpx.handle, ACPI_FULL_PATHNAME, &buffer);
-		printk(KERN_INFO "VGA switcheroo: detected switching method %s handle\n",
+		printk(KERN_INFO "vga_switcheroo: detected switching method %s handle\n",
 		       acpi_method_name);
 		radeon_atpx_priv.atpx_detected = true;
 		return true;

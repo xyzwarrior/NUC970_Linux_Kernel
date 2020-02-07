@@ -1474,7 +1474,7 @@ static byte connect_res(dword Id, word Number, DIVA_CAPI_ADAPTER *a,
 					add_ai(plci, &parms[5]);
 					sig_req(plci, REJECT, 0);
 				}
-				else if (Reject == 1 || Reject > 9)
+				else if (Reject == 1 || Reject >= 9)
 				{
 					add_ai(plci, &parms[5]);
 					sig_req(plci, HANGUP, 0);
@@ -4880,7 +4880,7 @@ static void sig_ind(PLCI *plci)
 	byte SS_Ind[] = "\x05\x02\x00\x02\x00\x00"; /* Hold_Ind struct*/
 	byte CF_Ind[] = "\x09\x02\x00\x06\x00\x00\x00\x00\x00\x00";
 	byte Interr_Err_Ind[] = "\x0a\x02\x00\x07\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
-	byte CONF_Ind[] = "\x09\x16\x00\x06\x00\x00\0x00\0x00\0x00\0x00";
+	byte CONF_Ind[] = "\x09\x16\x00\x06\x00\x00\x00\x00\x00\x00";
 	byte force_mt_info = false;
 	byte dir;
 	dword d;
@@ -11304,8 +11304,7 @@ static void mixer_notify_update(PLCI *plci, byte others)
 				((CAPI_MSG *) msg)->header.ncci = 0;
 				((CAPI_MSG *) msg)->info.facility_req.Selector = SELECTOR_LINE_INTERCONNECT;
 				((CAPI_MSG *) msg)->info.facility_req.structs[0] = 3;
-				((CAPI_MSG *) msg)->info.facility_req.structs[1] = LI_REQ_SILENT_UPDATE & 0xff;
-				((CAPI_MSG *) msg)->info.facility_req.structs[2] = LI_REQ_SILENT_UPDATE >> 8;
+				PUT_WORD(&(((CAPI_MSG *) msg)->info.facility_req.structs[1]), LI_REQ_SILENT_UPDATE);
 				((CAPI_MSG *) msg)->info.facility_req.structs[3] = 0;
 				w = api_put(notify_plci->appl, (CAPI_MSG *) msg);
 				if (w != _QUEUE_FULL)

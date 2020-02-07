@@ -4,7 +4,6 @@
  * Copyright (C) 2002, 2003, 2006 David S. Miller (davem@davemloft.net)
  */
 
-#include <linux/init.h>
 #include <linux/fs.h>
 #include <linux/mm.h>
 #include <linux/hugetlb.h>
@@ -21,8 +20,6 @@
 /* Slightly simplified from the non-hugepage variant because by
  * definition we don't have to worry about any page coloring stuff
  */
-#define VA_EXCLUDE_START (0x0000080000000000UL - (1UL << 32UL))
-#define VA_EXCLUDE_END   (0xfffff80000000000UL + (1UL << 32UL))
 
 static unsigned long hugetlb_get_unmapped_area_bottomup(struct file *filp,
 							unsigned long addr,
@@ -118,7 +115,7 @@ hugetlb_get_unmapped_area(struct file *file, unsigned long addr,
 		addr = ALIGN(addr, HPAGE_SIZE);
 		vma = find_vma(mm, addr);
 		if (task_size - len >= addr &&
-		    (!vma || addr + len <= vm_start_gap(vma)))
+		    (!vma || addr + len <= vma->vm_start))
 			return addr;
 	}
 	if (mm->get_unmapped_area == arch_get_unmapped_area)
@@ -175,26 +172,35 @@ pte_t *huge_pte_offset(struct mm_struct *mm, unsigned long addr)
 	return pte;
 }
 
-int huge_pmd_unshare(struct mm_struct *mm, unsigned long *addr, pte_t *ptep)
-{
-	return 0;
-}
-
 void set_huge_pte_at(struct mm_struct *mm, unsigned long addr,
 		     pte_t *ptep, pte_t entry)
 {
 	int i;
+	pte_t orig[2];
+	unsigned long nptes;
 
 	if (!pte_present(*ptep) && pte_present(entry))
-		mm->context.huge_pte_count++;
+		mm->context.hugetlb_pte_count++;
 
 	addr &= HPAGE_MASK;
-	for (i = 0; i < (1 << HUGETLB_PAGE_ORDER); i++) {
-		set_pte_at(mm, addr, ptep, entry);
+
+	nptes = 1 << HUGETLB_PAGE_ORDER;
+	orig[0] = *ptep;
+	orig[1] = *(ptep + nptes / 2);
+	for (i = 0; i < nptes; i++) {
+		*ptep = entry;
 		ptep++;
 		addr += PAGE_SIZE;
 		pte_val(entry) += PAGE_SIZE;
 	}
+
+	/* Issue TLB flush at REAL_HPAGE_SIZE boundaries */
+	addr -= REAL_HPAGE_SIZE;
+	ptep -= nptes / 2;
+	maybe_tlb_batch_add(mm, addr, ptep, orig[1], 0);
+	addr -= REAL_HPAGE_SIZE;
+	ptep -= nptes / 2;
+	maybe_tlb_batch_add(mm, addr, ptep, orig[0], 0);
 }
 
 pte_t huge_ptep_get_and_clear(struct mm_struct *mm, unsigned long addr,
@@ -202,26 +208,29 @@ pte_t huge_ptep_get_and_clear(struct mm_struct *mm, unsigned long addr,
 {
 	pte_t entry;
 	int i;
+	unsigned long nptes;
 
 	entry = *ptep;
 	if (pte_present(entry))
-		mm->context.huge_pte_count--;
+		mm->context.hugetlb_pte_count--;
 
 	addr &= HPAGE_MASK;
-
-	for (i = 0; i < (1 << HUGETLB_PAGE_ORDER); i++) {
-		pte_clear(mm, addr, ptep);
+	nptes = 1 << HUGETLB_PAGE_ORDER;
+	for (i = 0; i < nptes; i++) {
+		*ptep = __pte(0UL);
 		addr += PAGE_SIZE;
 		ptep++;
 	}
 
-	return entry;
-}
+	/* Issue TLB flush at REAL_HPAGE_SIZE boundaries */
+	addr -= REAL_HPAGE_SIZE;
+	ptep -= nptes / 2;
+	maybe_tlb_batch_add(mm, addr, ptep, entry, 0);
+	addr -= REAL_HPAGE_SIZE;
+	ptep -= nptes / 2;
+	maybe_tlb_batch_add(mm, addr, ptep, entry, 0);
 
-struct page *follow_huge_addr(struct mm_struct *mm,
-			      unsigned long address, int write)
-{
-	return ERR_PTR(-EINVAL);
+	return entry;
 }
 
 int pmd_huge(pmd_t pmd)
@@ -232,10 +241,4 @@ int pmd_huge(pmd_t pmd)
 int pud_huge(pud_t pud)
 {
 	return 0;
-}
-
-struct page *follow_huge_pmd(struct mm_struct *mm, unsigned long address,
-			     pmd_t *pmd, int write)
-{
-	return NULL;
 }

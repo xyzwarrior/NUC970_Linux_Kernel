@@ -23,6 +23,13 @@ module_param(dbfsize, uint, 0400);
 MODULE_PARM_DESC(dbfsize,
 		 "number of pages for each debug feature area (default 4)");
 
+static u32 dbflevel = 3;
+
+module_param(dbflevel, uint, 0400);
+MODULE_PARM_DESC(dbflevel,
+		 "log level for each debug feature area "
+		 "(default 3, range 0..6)");
+
 static inline unsigned int zfcp_dbf_plen(unsigned int offset)
 {
 	return sizeof(struct zfcp_dbf_pay) + offset - ZFCP_DBF_PAY_MAX_REC;
@@ -282,12 +289,11 @@ void zfcp_dbf_rec_trig(char *tag, struct zfcp_adapter *adapter,
 
 
 /**
- * zfcp_dbf_rec_run_lvl - trace event related to running recovery
- * @level: trace level to be used for event
+ * zfcp_dbf_rec_run - trace event related to running recovery
  * @tag: identifier for event
  * @erp: erp_action running
  */
-void zfcp_dbf_rec_run_lvl(int level, char *tag, struct zfcp_erp_action *erp)
+void zfcp_dbf_rec_run(char *tag, struct zfcp_erp_action *erp)
 {
 	struct zfcp_dbf *dbf = erp->adapter->dbf;
 	struct zfcp_dbf_rec *rec = &dbf->rec_buf;
@@ -313,18 +319,8 @@ void zfcp_dbf_rec_run_lvl(int level, char *tag, struct zfcp_erp_action *erp)
 	else
 		rec->u.run.rec_count = atomic_read(&erp->adapter->erp_counter);
 
-	debug_event(dbf->rec, level, rec, sizeof(*rec));
+	debug_event(dbf->rec, 1, rec, sizeof(*rec));
 	spin_unlock_irqrestore(&dbf->rec_lock, flags);
-}
-
-/**
- * zfcp_dbf_rec_run - trace event related to running recovery
- * @tag: identifier for event
- * @erp: erp_action running
- */
-void zfcp_dbf_rec_run(char *tag, struct zfcp_erp_action *erp)
-{
-	zfcp_dbf_rec_run_lvl(1, tag, erp);
 }
 
 /**
@@ -417,7 +413,7 @@ out:
 
 /**
  * zfcp_dbf_san_req - trace event for issued SAN request
- * @tag: indentifier for event
+ * @tag: identifier for event
  * @fsf_req: request containing issued CT data
  * d_id: destination ID
  */
@@ -487,7 +483,7 @@ static u16 zfcp_dbf_san_res_cap_len_if_gpn_ft(char *tag,
 
 /**
  * zfcp_dbf_san_res - trace event for received SAN request
- * @tag: indentifier for event
+ * @tag: identifier for event
  * @fsf_req: request containing issued CT data
  */
 void zfcp_dbf_san_res(char *tag, struct zfcp_fsf_req *fsf)
@@ -504,7 +500,7 @@ void zfcp_dbf_san_res(char *tag, struct zfcp_fsf_req *fsf)
 
 /**
  * zfcp_dbf_san_in_els - trace event for incoming ELS
- * @tag: indentifier for event
+ * @tag: identifier for event
  * @fsf_req: request containing issued CT data
  */
 void zfcp_dbf_san_in_els(char *tag, struct zfcp_fsf_req *fsf)
@@ -548,7 +544,8 @@ void zfcp_dbf_scsi(char *tag, int level, struct scsi_cmnd *sc,
 	rec->scsi_retries = sc->retries;
 	rec->scsi_allowed = sc->allowed;
 	rec->scsi_id = sc->device->id;
-	rec->scsi_lun = sc->device->lun;
+	/* struct zfcp_dbf_scsi needs to be updated to handle 64bit LUNs */
+	rec->scsi_lun = (u32)sc->device->lun;
 	rec->host_scribble = (unsigned long)sc->host_scribble;
 
 	memcpy(rec->scsi_opcode, sc->cmnd,
@@ -556,32 +553,19 @@ void zfcp_dbf_scsi(char *tag, int level, struct scsi_cmnd *sc,
 
 	if (fsf) {
 		rec->fsf_req_id = fsf->req_id;
-		rec->pl_len = FCP_RESP_WITH_EXT;
 		fcp_rsp = (struct fcp_resp_with_ext *)
 				&(fsf->qtcb->bottom.io.fcp_rsp);
-		/* mandatory parts of FCP_RSP IU in this SCSI record */
 		memcpy(&rec->fcp_rsp, fcp_rsp, FCP_RESP_WITH_EXT);
 		if (fcp_rsp->resp.fr_flags & FCP_RSP_LEN_VAL) {
 			fcp_rsp_info = (struct fcp_resp_rsp_info *) &fcp_rsp[1];
 			rec->fcp_rsp_info = fcp_rsp_info->rsp_code;
-			rec->pl_len += be32_to_cpu(fcp_rsp->ext.fr_rsp_len);
 		}
 		if (fcp_rsp->resp.fr_flags & FCP_SNS_LEN_VAL) {
-			rec->pl_len += be32_to_cpu(fcp_rsp->ext.fr_sns_len);
+			rec->pl_len = min((u16)SCSI_SENSE_BUFFERSIZE,
+					  (u16)ZFCP_DBF_PAY_MAX_REC);
+			zfcp_dbf_pl_write(dbf, sc->sense_buffer, rec->pl_len,
+					  "fcp_sns", fsf->req_id);
 		}
-		/* complete FCP_RSP IU in associated PAYload record
-		 * but only if there are optional parts
-		 */
-		if (fcp_rsp->resp.fr_flags != 0)
-			zfcp_dbf_pl_write(
-				dbf, fcp_rsp,
-				/* at least one full PAY record
-				 * but not beyond hardware response field
-				 */
-				min_t(u16, max_t(u16, rec->pl_len,
-						 ZFCP_DBF_PAY_MAX_REC),
-				      FSF_FCP_RSP_SIZE),
-				"fcp_riu", fsf->req_id);
 	}
 
 	debug_event(dbf->scsi, level, rec, sizeof(*rec));
@@ -597,7 +581,7 @@ static debug_info_t *zfcp_dbf_reg(const char *name, int size, int rec_size)
 		return NULL;
 
 	debug_register_view(d, &debug_hex_ascii_view);
-	debug_set_level(d, 3);
+	debug_set_level(d, dbflevel);
 
 	return d;
 }

@@ -3,7 +3,6 @@
 #include <linux/usb/hcd.h>
 #include <linux/usb/quirks.h>
 #include <linux/module.h>
-#include <linux/init.h>
 #include <linux/slab.h>
 #include <linux/device.h>
 #include <asm/byteorder.h>
@@ -11,7 +10,6 @@
 
 
 #define USB_MAXALTSETTING		128	/* Hard limit */
-#define USB_MAXENDPOINTS		30	/* Hard limit */
 
 #define USB_MAXCONFIG			8	/* Arbitrary limit */
 
@@ -207,16 +205,6 @@ static int usb_parse_endpoint(struct device *ddev, int cfgno, int inum,
 	if (ifp->desc.bNumEndpoints >= num_ep)
 		goto skip_to_next_endpoint_or_interface_descriptor;
 
-	/* Check for duplicate endpoint addresses */
-	for (i = 0; i < ifp->desc.bNumEndpoints; ++i) {
-		if (ifp->endpoint[i].desc.bEndpointAddress ==
-		    d->bEndpointAddress) {
-			dev_warn(ddev, "config %d interface %d altsetting %d has a duplicate endpoint with address 0x%X, skipping\n",
-			    cfgno, inum, asnum, d->bEndpointAddress);
-			goto skip_to_next_endpoint_or_interface_descriptor;
-		}
-	}
-
 	endpoint = &ifp->endpoint[ifp->desc.bNumEndpoints];
 	++ifp->desc.bNumEndpoints;
 
@@ -232,6 +220,7 @@ static int usb_parse_endpoint(struct device *ddev, int cfgno, int inum,
 	if (usb_endpoint_xfer_int(d)) {
 		i = 1;
 		switch (to_usb_device(ddev)->speed) {
+		case USB_SPEED_SUPER_PLUS:
 		case USB_SPEED_SUPER:
 		case USB_SPEED_HIGH:
 			/*
@@ -244,6 +233,17 @@ static int usb_parse_endpoint(struct device *ddev, int cfgno, int inum,
 			if (n == 0)
 				n = 7;	/* 8 ms = 2^(7-1) uframes */
 			j = 16;
+
+			/*
+			 * Adjust bInterval for quirked devices.
+			 * This quirk fixes bIntervals reported in
+			 * linear microframes.
+			 */
+			if (to_usb_device(ddev)->quirks &
+				USB_QUIRK_LINEAR_UFRAME_INTR_BINTERVAL) {
+				n = clamp(fls(d->bInterval), i, j);
+				i = j = n;
+			}
 			break;
 		default:		/* USB_SPEED_FULL or _LOW */
 			/*
@@ -313,6 +313,7 @@ static int usb_parse_endpoint(struct device *ddev, int cfgno, int inum,
 		maxpacket_maxes = high_speed_maxpacket_maxes;
 		break;
 	case USB_SPEED_SUPER:
+	case USB_SPEED_SUPER_PLUS:
 		maxpacket_maxes = super_speed_maxpacket_maxes;
 		break;
 	}
@@ -323,20 +324,6 @@ static int usb_parse_endpoint(struct device *ddev, int cfgno, int inum,
 		    cfgno, inum, asnum, d->bEndpointAddress, maxp, j);
 		maxp = j;
 		endpoint->desc.wMaxPacketSize = cpu_to_le16(i | maxp);
-	}
-
-	/*
-	 * Some buggy high speed devices have bulk endpoints using
-	 * maxpacket sizes larger than 64 under full-speed mode.  
-	 * Full speed HCDs may not
-	 * be able to handle that particular bug, so let's modify 
-	 * the maxpacket size to make it work.
-	 */
-	if (to_usb_device(ddev)->speed == USB_SPEED_FULL
-			&& usb_endpoint_xfer_bulk(d)) {
-
-		if (usb_endpoint_maxp(&endpoint->desc) > 64)
-			endpoint->desc.wMaxPacketSize = cpu_to_le16(64);
 	}
 
 	/*
@@ -354,7 +341,7 @@ static int usb_parse_endpoint(struct device *ddev, int cfgno, int inum,
 	}
 
 	/* Parse a possible SuperSpeed endpoint companion descriptor */
-	if (to_usb_device(ddev)->speed == USB_SPEED_SUPER)
+	if (to_usb_device(ddev)->speed >= USB_SPEED_SUPER)
 		usb_parse_ss_endpoint_companion(ddev, cfgno,
 				inum, asnum, endpoint, buffer, size);
 
@@ -933,6 +920,10 @@ int usb_get_bos_descriptor(struct usb_device *dev)
 		case USB_SS_CAP_TYPE:
 			dev->bos->ss_cap =
 				(struct usb_ss_cap_descriptor *)buffer;
+			break;
+		case USB_SSP_CAP_TYPE:
+			dev->bos->ssp_cap =
+				(struct usb_ssp_cap_descriptor *)buffer;
 			break;
 		case CONTAINER_ID_TYPE:
 			dev->bos->ss_id =

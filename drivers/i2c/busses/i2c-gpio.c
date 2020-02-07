@@ -15,8 +15,8 @@
 #include <linux/slab.h>
 #include <linux/platform_device.h>
 #include <linux/gpio.h>
+#include <linux/of.h>
 #include <linux/of_gpio.h>
-#include <linux/of_i2c.h>
 
 struct i2c_gpio_private_data {
 	struct i2c_adapter adap;
@@ -93,7 +93,7 @@ static int of_i2c_gpio_get_pins(struct device_node *np,
 
 	*sda_pin = of_get_gpio(np, 0);
 	*scl_pin = of_get_gpio(np, 1);
-	
+
 	if (*sda_pin == -EPROBE_DEFER || *scl_pin == -EPROBE_DEFER)
 		return -EPROBE_DEFER;
 
@@ -132,7 +132,7 @@ static int i2c_gpio_probe(struct platform_device *pdev)
 	struct i2c_adapter *adap;
 	unsigned int sda_pin, scl_pin;
 	int ret;
-	printk("%s - pdev = %s\n", __func__, pdev->name);
+
 	/* First get the GPIO pins; if it fails, we'll defer the probe. */
 	if (pdev->dev.of_node) {
 		ret = of_i2c_gpio_get_pins(pdev->dev.of_node,
@@ -140,31 +140,29 @@ static int i2c_gpio_probe(struct platform_device *pdev)
 		if (ret)
 			return ret;
 	} else {
-		if (!pdev->dev.platform_data)
+		if (!dev_get_platdata(&pdev->dev))
 			return -ENXIO;
-		pdata = pdev->dev.platform_data;
+		pdata = dev_get_platdata(&pdev->dev);
 		sda_pin = pdata->sda_pin;
 		scl_pin = pdata->scl_pin;
 	}
 
-	ret = gpio_request(sda_pin, "sda");
+	ret = devm_gpio_request(&pdev->dev, sda_pin, "sda");
 	if (ret) {
 		if (ret == -EINVAL)
 			ret = -EPROBE_DEFER;	/* Try again later */
-		goto err_request_sda;
+		return ret;
 	}
-	ret = gpio_request(scl_pin, "scl");
+	ret = devm_gpio_request(&pdev->dev, scl_pin, "scl");
 	if (ret) {
 		if (ret == -EINVAL)
 			ret = -EPROBE_DEFER;	/* Try again later */
-		goto err_request_scl;
+		return ret;
 	}
 
 	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
-	if (!priv) {
-		ret = -ENOMEM;
-		goto err_add_bus;
-	}
+	if (!priv)
+		return -ENOMEM;
 	adap = &priv->adap;
 	bit_data = &priv->bit_data;
 	pdata = &priv->pdata;
@@ -174,7 +172,7 @@ static int i2c_gpio_probe(struct platform_device *pdev)
 		pdata->scl_pin = scl_pin;
 		of_i2c_gpio_get_props(pdev->dev.of_node, pdata);
 	} else {
-		memcpy(pdata, pdev->dev.platform_data, sizeof(*pdata));
+		memcpy(pdata, dev_get_platdata(&pdev->dev), sizeof(*pdata));
 	}
 
 	if (pdata->sda_is_open_drain) {
@@ -225,9 +223,7 @@ static int i2c_gpio_probe(struct platform_device *pdev)
 	adap->nr = pdev->id;
 	ret = i2c_bit_add_numbered_bus(adap);
 	if (ret)
-		goto err_add_bus;
-
-	of_i2c_register_devices(adap);
+		return ret;
 
 	platform_set_drvdata(pdev, priv);
 
@@ -237,28 +233,17 @@ static int i2c_gpio_probe(struct platform_device *pdev)
 		 ? ", no clock stretching" : "");
 
 	return 0;
-
-err_add_bus:
-	gpio_free(scl_pin);
-err_request_scl:
-	gpio_free(sda_pin);
-err_request_sda:
-	return ret;
 }
 
 static int i2c_gpio_remove(struct platform_device *pdev)
 {
 	struct i2c_gpio_private_data *priv;
-	struct i2c_gpio_platform_data *pdata;
 	struct i2c_adapter *adap;
 
 	priv = platform_get_drvdata(pdev);
 	adap = &priv->adap;
-	pdata = &priv->pdata;
 
 	i2c_del_adapter(adap);
-	gpio_free(pdata->scl_pin);
-	gpio_free(pdata->sda_pin);
 
 	return 0;
 }
@@ -275,36 +260,16 @@ MODULE_DEVICE_TABLE(of, i2c_gpio_dt_ids);
 static struct platform_driver i2c_gpio_driver = {
 	.driver		= {
 		.name	= "i2c-gpio",
-		.owner	= THIS_MODULE,
 		.of_match_table	= of_match_ptr(i2c_gpio_dt_ids),
 	},
 	.probe		= i2c_gpio_probe,
 	.remove		= i2c_gpio_remove,
 };
 
-//#if defined(CONFIG_GPIO_NUC970) || defined(CONFIG_GPIO_NUC970_MODULE)
-//#if defined(CONFIG_I2C_ALGOBIT) || defined(CONFIG_I2C_ALGOBIT_MODULE)
-//static struct i2c_board_info __initdata nuc970_i2c_clients2[] =
-//{
-//#ifdef CONFIG_SENSOR_OV7725
-//	{I2C_BOARD_INFO("ov7725",  0x21),},
-//#endif
-//#ifdef CONFIG_SENSOR_OV5640
-//	{I2C_BOARD_INFO("ov5640",  0x3c),},
-//#endif
-//#ifdef CONFIG_SENSOR_NT99141
-//	{I2C_BOARD_INFO("nt99141", 0x2a),},
-//#endif
-//#ifdef CONFIG_SENSOR_NT99050
-//	{I2C_BOARD_INFO("nt99050", 0x21),},
-//#endif
-//};
-
 static int __init i2c_gpio_init(void)
 {
 	int ret;
-	//i2c_register_board_info(2, nuc970_i2c_clients2, sizeof(nuc970_i2c_clients2)/sizeof(struct i2c_board_info));
-	
+
 	ret = platform_driver_register(&i2c_gpio_driver);
 	if (ret)
 		printk(KERN_ERR "i2c-gpio: probe failed: %d\n", ret);

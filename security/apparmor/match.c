@@ -4,7 +4,7 @@
  * This file contains AppArmor dfa based regular expression matching engine
  *
  * Copyright (C) 1998-2008 Novell/SUSE
- * Copyright 2009-2010 Canonical Ltd.
+ * Copyright 2009-2012 Canonical Ltd.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -23,6 +23,8 @@
 #include "include/apparmor.h"
 #include "include/match.h"
 
+#define base_idx(X) ((X) & 0xffffff)
+
 /**
  * unpack_table - unpack a dfa table (one of accept, default, base, next check)
  * @blob: data to unpack (NOT NULL)
@@ -30,7 +32,7 @@
  *
  * Returns: pointer to table else NULL on failure
  *
- * NOTE: must be freed by kvfree (not kmalloc)
+ * NOTE: must be freed by kvfree (not kfree)
  */
 static struct table_header *unpack_table(char *blob, size_t bsize)
 {
@@ -45,8 +47,6 @@ static struct table_header *unpack_table(char *blob, size_t bsize)
 	 * it every time we use td_id as an index
 	 */
 	th.td_id = be16_to_cpu(*(u16 *) (blob)) - 1;
-	if (th.td_id > YYTD_ID_MAX)
-		goto out;
 	th.td_flags = be16_to_cpu(*(u16 *) (blob + 2));
 	th.td_lolen = be32_to_cpu(*(u32 *) (blob + 8));
 	blob += sizeof(struct table_header);
@@ -59,11 +59,9 @@ static struct table_header *unpack_table(char *blob, size_t bsize)
 	if (bsize < tsize)
 		goto out;
 
-	table = kvmalloc(tsize);
+	table = kvzalloc(tsize);
 	if (table) {
-		table->td_id = th.td_id;
-		table->td_flags = th.td_flags;
-		table->td_lolen = th.td_lolen;
+		*table = th;
 		if (th.td_flags == YYTD_DATA8)
 			UNPACK_ARRAY(table->td_data, blob, th.td_lolen,
 				     u8, byte_to_byte);
@@ -75,14 +73,14 @@ static struct table_header *unpack_table(char *blob, size_t bsize)
 				     u32, be32_to_cpu);
 		else
 			goto fail;
-		/* if table was vmalloced make sure the page tables are synced
-		 * before it is used, as it goes live to all cpus.
-		 */
-		if (is_vmalloc_addr(table))
-			vm_unmap_aliases();
 	}
 
 out:
+	/* if table was vmalloced make sure the page tables are synced
+	 * before it is used, as it goes live to all cpus.
+	 */
+	if (is_vmalloc_addr(table))
+		vm_unmap_aliases();
 	return table;
 fail:
 	kvfree(table);
@@ -141,8 +139,7 @@ static int verify_dfa(struct aa_dfa *dfa, int flags)
 		for (i = 0; i < state_count; i++) {
 			if (DEFAULT_TABLE(dfa)[i] >= state_count)
 				goto out;
-			/* TODO: do check that DEF state recursion terminates */
-			if (BASE_TABLE(dfa)[i] + 255 >= trans_count) {
+			if (base_idx(BASE_TABLE(dfa)[i]) + 255 >= trans_count) {
 				printk(KERN_ERR "AppArmor DFA next/check upper "
 				       "bounds error\n");
 				goto out;
@@ -318,7 +315,7 @@ unsigned int aa_dfa_match_len(struct aa_dfa *dfa, unsigned int start,
 		u8 *equiv = EQUIV_TABLE(dfa);
 		/* default is direct to next state */
 		for (; len; len--) {
-			pos = base[state] + equiv[(u8) *str++];
+			pos = base_idx(base[state]) + equiv[(u8) *str++];
 			if (check[pos] == state)
 				state = next[pos];
 			else
@@ -327,7 +324,7 @@ unsigned int aa_dfa_match_len(struct aa_dfa *dfa, unsigned int start,
 	} else {
 		/* default is direct to next state */
 		for (; len; len--) {
-			pos = base[state] + (u8) *str++;
+			pos = base_idx(base[state]) + (u8) *str++;
 			if (check[pos] == state)
 				state = next[pos];
 			else
@@ -368,7 +365,7 @@ unsigned int aa_dfa_match(struct aa_dfa *dfa, unsigned int start,
 		u8 *equiv = EQUIV_TABLE(dfa);
 		/* default is direct to next state */
 		while (*str) {
-			pos = base[state] + equiv[(u8) *str++];
+			pos = base_idx(base[state]) + equiv[(u8) *str++];
 			if (check[pos] == state)
 				state = next[pos];
 			else
@@ -377,7 +374,7 @@ unsigned int aa_dfa_match(struct aa_dfa *dfa, unsigned int start,
 	} else {
 		/* default is direct to next state */
 		while (*str) {
-			pos = base[state] + (u8) *str++;
+			pos = base_idx(base[state]) + (u8) *str++;
 			if (check[pos] == state)
 				state = next[pos];
 			else
@@ -413,14 +410,14 @@ unsigned int aa_dfa_next(struct aa_dfa *dfa, unsigned int state,
 		u8 *equiv = EQUIV_TABLE(dfa);
 		/* default is direct to next state */
 
-		pos = base[state] + equiv[(u8) c];
+		pos = base_idx(base[state]) + equiv[(u8) c];
 		if (check[pos] == state)
 			state = next[pos];
 		else
 			state = def[state];
 	} else {
 		/* default is direct to next state */
-		pos = base[state] + (u8) c;
+		pos = base_idx(base[state]) + (u8) c;
 		if (check[pos] == state)
 			state = next[pos];
 		else

@@ -16,7 +16,6 @@
 
 #include <linux/platform_device.h>
 #include <linux/clk.h>
-#include <linux/memblock.h>
 #include <asm/mach/arch.h>
 #include <asm/mach/map.h>
 #include <asm/mach-types.h>
@@ -62,7 +61,7 @@ static struct map_desc nuc970_iodesc[] __initdata = {
         IODESC_ENT(SRAM),
 };
 
-extern void nuc970_restart(char mode, const char *cmd);
+extern void nuc970_restart(/*char*/enum reboot_mode mode, const char *cmd);
 extern void nuc970_timer_init(void);
 static struct platform_device *nuc970_dev[] __initdata = {
 
@@ -83,22 +82,13 @@ static void __init nuc970_init_late(void)
 	nuc970_init_suspend();
 }
 
-static void __init nuc970_reserve_memoey(void)
-{
-	if(memblock_reserve(0, 1024) < 0)
-		printk("Failed to reserve memory 0x0~0x400\n");
-}
-#ifdef CONFIG_CPU_NUC970
 MACHINE_START(NUC970, "NUC970")
-#elif defined (CONFIG_CPU_N9H30)
-MACHINE_START(NUC970, "N9H30")
-#endif
 	.atag_offset	= 0x100,
 	.map_io		= nuc970_map_io,
 	.init_irq	= nuc970_init_irq,
 	.init_machine	= nuc970_init,
 	.init_time	= nuc970_timer_init,
 	.init_late	= nuc970_init_late,
-	.reserve	= nuc970_reserve_memoey,
 	.restart	= nuc970_restart,
 MACHINE_END
+

@@ -141,18 +141,6 @@ static struct platform_device nuc970_device_crypto = {
                 .coherent_dma_mask = 0xffffffffUL
         }
 };
-
-static struct platform_device nuc970_device_crypto_raw = {
-	.name = "nuc970-crypto-raw",
-	.id = -1,
-	.resource = nuc970_crypto_resource,
-};
-
-static struct platform_device nuc970_device_prng = {
-	.name = "nuvoton-rng",
-	.id = -1,
-	.resource = nuc970_crypto_resource,
-};
 #endif
 
 /* USB Device (Gadget)*/
@@ -333,45 +321,6 @@ static struct nuc970fb_display nuc970fb_lcd_info[] = {
 	},
 #endif
 
-#ifdef CONFIG_FW070TFT_800X480
-	/* FW070TFT 800x480 TFT Panel , 24bits*/
-	[0] = {
-#ifdef CONFIG_FB_SRCFMT_RGB888
-		.type		= LCM_DCCS_VA_SRC_RGB888,
-		.bpp		= 32,
-#elif defined(CONFIG_FB_SRCFMT_RGB565)
-		.type		= LCM_DCCS_VA_SRC_RGB565,
-		.bpp		= 16,
-#endif
-		.width		= 800,
-		.height		= 480,
-		.xres		= 800,
-		.yres		= 480,
-		.pixclock	= 32000000,
-		.left_margin	= 40,
-		.right_margin   = 196,
-		.hsync_len		= 20,
-		.upper_margin	= 23,
-		.lower_margin	= 19,
-		.vsync_len		= 3,
-#ifdef CONFIG_FB_SRCFMT_RGB888
-		.dccs		= 0x0e00020a,
-                .fbctrl		= 0x03200320,
-#elif defined(CONFIG_FB_SRCFMT_RGB565)
-		.dccs		= 0x0e00040a,
-		.fbctrl		= 0x01900190,
-#endif
-#ifdef CONFIG_FB_LCD_16BIT_PIN
-                .devctl		= 0x050000c0,
-#elif defined(CONFIG_FB_LCD_18BIT_PIN)
-                .devctl		= 0x060000c0,
-#elif defined(CONFIG_FB_LCD_24BIT_PIN)
-                .devctl		= 0x070000c0,
-#endif
-		.scale		= 0x04000400,
-	},
-#endif
-
 #ifdef CONFIG_E50A2V1_800X480
 	/* E50A2V1 800x480 TFT Panel , 24bits*/
 	[0] = {
@@ -395,17 +344,17 @@ static struct nuc970fb_display nuc970fb_lcd_info[] = {
 		.vsync_len		= 3,
 #ifdef CONFIG_FB_SRCFMT_RGB888
 		.dccs		= 0x0e00020a,
-                .fbctrl		= 0x03200320,
+        .fbctrl		= 0x03200320,
 #elif defined(CONFIG_FB_SRCFMT_RGB565)
 		.dccs		= 0x0e00040a,
 		.fbctrl		= 0x01900190,
 #endif
 #ifdef CONFIG_FB_LCD_16BIT_PIN
-                .devctl		= 0x050000c0,
+        .devctl		= 0x050000c0,
 #elif defined(CONFIG_FB_LCD_18BIT_PIN)
-                .devctl		= 0x060000c0,
+        .devctl		= 0x060000c0,
 #elif defined(CONFIG_FB_LCD_24BIT_PIN)
-                .devctl		= 0x070000c0,
+        .devctl		= 0x070000c0,
 #endif
 		.scale		= 0x04000400,
 	},
@@ -413,7 +362,7 @@ static struct nuc970fb_display nuc970fb_lcd_info[] = {
 
 #ifdef CONFIG_ILI9431_MPU80_240x320
 	/* ILI9431 240x320 MPU Panel , 16bits*/
-	[0] = {
+	[0] = {		
 		.type   = LCM_DCCS_VA_SRC_RGB565,
 		.bpp		= 16,
 		.width		= 240,
@@ -426,11 +375,11 @@ static struct nuc970fb_display nuc970fb_lcd_info[] = {
 		.hsync_len		= 2,
 		.upper_margin	= 27,
 		.lower_margin	= 5,
-		.vsync_len		= 11,
+		.vsync_len		= 11,	
 		.dccs		= 0x0e000400,
 		.fbctrl		= 0x00780078,
-                .devctl		= 0xC50000E0,
-		.scale		= 0x04000400,
+        .devctl		= 0xC50000E0,
+		.scale		= 0x04000400,		
 	},
 #endif
 };
@@ -439,8 +388,8 @@ static struct nuc970fb_mach_info nuc970fb_fb_info = {
 	.displays		= &nuc970fb_lcd_info[0],
 	.num_displays		= ARRAY_SIZE(nuc970fb_lcd_info),
 	.default_display	= 0,
-        .gpio_blen          = NUC970_PG3,
-        .gpio_lcs           = NUC970_PG2,
+    .gpio_blen          = NUC970_PG3,
+    .gpio_lcs           = NUC970_PG2,
 };
 
 static struct resource nuc970fb_lcd_resource[] = {
@@ -863,15 +812,20 @@ static struct mtd_partition nuc970_spi0_flash_partitions[] = {
         },
  #else
         {
-                .name = "kernel",
-                .size = 0x0800000,
+                .name   = "u-boot",
+                .size   = 0x60000, /* 384K */
                 .offset = 0,
         },
-        {
-                .name = "rootfs",
-                .size = 0x0800000,
-                .offset = 0x0800000,
-        },
+	{
+		.name   = "u-boot-env",
+		.size   = 0x20000, /* 128K */
+		.offset = 0x60000,
+	},
+	{
+		.name   = "obmc-ubi",
+		.size   = 0xf80000, /* 15.5M */
+		.offset = 0x080000,
+	},
  #endif
 };
 static struct flash_platform_data nuc970_spi0_flash_data = {
@@ -886,7 +840,7 @@ static struct spi_board_info nuc970_spi0_board_info[] __initdata = {
 #ifdef CONFIG_MTD_M25P80
         {
                 .modalias = "m25p80",
-                .max_speed_hz = 18750000,
+                .max_speed_hz = 15000000,
                 .bus_num = 0,
                 .chip_select = 0,       //use SS0
                 .platform_data = &nuc970_spi0_flash_data,
@@ -901,7 +855,7 @@ static struct spi_board_info nuc970_spi0_board_info[] __initdata = {
 #ifdef CONFIG_SPI_SPIDEV
         {
                 .modalias = "spidev",
-                .max_speed_hz = 18750000,
+                .max_speed_hz = 75000000,
                 .bus_num = 0,
                 .chip_select = 1,       //use SS1
                 .mode = SPI_MODE_0,
@@ -955,7 +909,7 @@ struct platform_device nuc970_device_spi0 = {
 static struct spi_board_info nuc970_spi1_board_info[] __initdata = {
         {
                 .modalias = "spidev",
-                .max_speed_hz = 18750000,
+                .max_speed_hz = 75000000,
                 .bus_num = 1,
                 .chip_select = 0,       //use SS0
                 .mode = SPI_MODE_0,
@@ -986,7 +940,7 @@ static struct spi_board_info nuc970_spi1_board_info[] __initdata = {
 #ifdef CONFIG_MTD_M25P80
         {
                 .modalias = "m25p80",
-                .max_speed_hz = 18750000,
+                .max_speed_hz = 15000000,
                 .bus_num = 1,
                 .chip_select = 0,       //use SS0
                 .platform_data = &nuc970_spi1_flash_data,
@@ -996,7 +950,7 @@ static struct spi_board_info nuc970_spi1_board_info[] __initdata = {
 #ifdef CONFIG_SPI_SPIDEV
         {
                 .modalias = "spidev",
-                .max_speed_hz = 18750000,
+                .max_speed_hz = 75000000,
                 .bus_num = 1,
                 .chip_select = 1,       //use SS1
                 .mode = SPI_MODE_0,
@@ -1611,8 +1565,6 @@ static struct platform_device *nuc970_public_dev[] __initdata = {
 #endif
 #if defined(CONFIG_CRYPTO_DEV_NUC970) || defined(CONFIG_CRYPTO_DEV_NUC970_MODULE)
 		&nuc970_device_crypto,
-		&nuc970_device_crypto_raw,
-		&nuc970_device_prng,
 #endif
 #if defined(CONFIG_FB_NUC970) || defined(CONFIG_FB_NUC970_MODULE)
         &nuc970fb_device_lcd,
@@ -1736,7 +1688,7 @@ void __init nuc970_platform_init(struct platform_device **device, int size)
 #if defined(CONFIG_MTD_M25P80) || defined(CONFIG_SPI_SPIDEV) || defined(CONFIG_SPI_SPIDEV_MODULE)
  	/* register spi devices */
 #if defined(CONFIG_SPI_NUC970_P0) || defined(CONFIG_SPI_NUC970_P0_MODULE)
-	spi_register_board_info(nuc970_spi0_board_info, ARRAY_SIZE(nuc970_spi0_board_info));
+    spi_register_board_info(nuc970_spi0_board_info, ARRAY_SIZE(nuc970_spi0_board_info));
 #endif
 #if defined(CONFIG_SPI_NUC970_P1) || defined(CONFIG_SPI_NUC970_P1_MODULE)
     spi_register_board_info(nuc970_spi1_board_info, ARRAY_SIZE(nuc970_spi1_board_info));
@@ -1757,3 +1709,4 @@ void __init nuc970_platform_init(struct platform_device **device, int size)
 	pwm_add_table(board_pwm_lookup, ARRAY_SIZE(board_pwm_lookup));
 #endif
 }
+

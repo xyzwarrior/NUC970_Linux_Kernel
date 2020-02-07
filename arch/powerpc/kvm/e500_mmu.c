@@ -32,7 +32,7 @@
 #include <asm/kvm_ppc.h>
 
 #include "e500.h"
-#include "trace.h"
+#include "trace_booke.h"
 #include "timing.h"
 #include "e500_mmu_host.h"
 
@@ -377,7 +377,7 @@ int kvmppc_e500_emul_tlbsx(struct kvm_vcpu *vcpu, gva_t ea)
 			| MAS0_NV(vcpu_e500->gtlb_nv[tlbsel]);
 		vcpu->arch.shared->mas1 =
 			  (vcpu->arch.shared->mas6 & MAS6_SPID0)
-			| (vcpu->arch.shared->mas6 & (MAS6_SAS ? MAS1_TS : 0))
+			| ((vcpu->arch.shared->mas6 & MAS6_SAS) ? MAS1_TS : 0)
 			| (vcpu->arch.shared->mas4 & MAS4_TSIZED(~0));
 		vcpu->arch.shared->mas2 &= MAS2_EPN;
 		vcpu->arch.shared->mas2 |= vcpu->arch.shared->mas4 &
@@ -536,7 +536,7 @@ gpa_t kvmppc_mmu_xlate(struct kvm_vcpu *vcpu, unsigned int index,
 	return get_tlb_raddr(gtlbe) | (eaddr & pgmask);
 }
 
-void kvmppc_mmu_destroy(struct kvm_vcpu *vcpu)
+void kvmppc_mmu_destroy_e500(struct kvm_vcpu *vcpu)
 {
 }
 

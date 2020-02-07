@@ -4,224 +4,6 @@
 
 menu "Misc devices"
 
-config NUC970_GE2D
-	tristate "NUC970/N9H30 2D support"
-	depends on ARCH_NUC970
-	help
-	  2D engine for NUC970/N9H30.
-
-	  To compile this driver as a module, choose M here: the module
-	  will be called nuc970-ge2d.
-
-config NUC970_SC
-	tristate "NUC970/N9H30 Smartcard Interface support"
-	depends on ARCH_NUC970
-	help
-	 Smartcard card interface support for NUC970/N9H30 series processor.
-	 This driver comply with EMV2000 and supports T0 and T1 transfer.
-
-config EMV_CHECK
-	bool "Perform EMV check"
-	depends on NUC970_SC
-
-config	NUC970_SC0
-	bool "NUC970/N9H30 SC0 support"
-	depends on NUC970_SC && !USE_OF
-
-choice
-	prompt "NUC970/N9H30 SC0 pin selection"
-	default NUC970_SC_PG
-	depends on NUC970_SC0
-	help
-	  Select SC0 multi function pin.
-
-	config NUC970_SC_PG
-		bool "Use port G"
-	config NUC970_SC_PI
-		bool "Use port I"
-endchoice
-
-
-choice
-	prompt "NUC970/N9H30 SC0 CD pin config"
-	default NUC970_SC0_CDLV_H
-	depends on NUC970_SC0
-	help
-	  Select SC0 card detect level.
-
-	config NUC970_SC0_CDLV_H
-		bool "CD high as card insert"
-	config NUC970_SC0_CDLV_L
-		bool "CD low as card insert"
-	config NUC970_SC0_CD_IGNORE
-		bool "Ignore CD signal"
-endchoice
-
-config	NUC970_SC0_PWRINV
-	bool "Inverse SC0 power pin level"
-	depends on NUC970_SC0
-
-
-config	NUC970_SC1
-	bool "NUC970/N9H30 SC1 support"
-	depends on NUC970_SC && !USE_OF
-	help
-	 Enabe this option will configure SC1 MFP
-
-choice
-	prompt "NUC970/N9H30 SC1 CD pin config"
-	default NUC970_SC1_CDLV_H
-	depends on NUC970_SC1
-	help
-	  Select SC1 card detect level.
-
-	config NUC970_SC1_CDLV_H
-		bool "CD high as card insert"
-	config NUC970_SC1_CDLV_L
-		bool "CD low as card insert"
-	config NUC970_SC1_CD_IGNORE
-		bool "Ignore CD signal"
-endchoice
-
-config	NUC970_SC1_PWRINV
-	bool "Inverse SC1 power pin level"
-	depends on NUC970_SC1
-
-
-config NUC970_ETIMER
-	tristate "NUC970/N9H30 Enhance Timer (ETIMER) support"
-	depends on ARCH_NUC970 && !NUC970_CLK_ETIMER
-	help
-	  Enhance timer driver Nuvoton NUC970/N9H30 Series processor.
-	  This timer also supports capture function.
-
-	  To compile this driver as a module, choose M here: the module
-	  will be called nuc970-etimer.
-
-config NUC970_ETIMER_WKUP
-	tristate "NUC970/N9H30 Enhance Timer (ETIMER) wake-up support"
-        depends on NUC970_ETIMER
-choice
-	prompt "NUC970/N9H30 ETIMER channel 0 toggle output pin"
-	default NUC970_ETIMER0_TGL_NONE
-	depends on NUC970_ETIMER
-	help
-	  Select ETIMER channel 0 toggle output pin.
-
-	config NUC970_ETIMER0_TGL_NONE
-		bool "No output"
-	config NUC970_ETIMER0_TGL_PC6
-		bool "Output to PC6"
-	config NUC970_ETIMER0_TGL_PB2
-		bool "Output to PB2"
-endchoice
-
-choice
-	prompt "NUC970/N9H30 ETIMER channel 0 capture input pin"
-	default NUC970_ETIMER0_CAP_NONE
-	depends on NUC970_ETIMER
-	help
-	  Select ETIMER channel 0 capture input pin.
-
-	config NUC970_ETIMER0_CAP_NONE
-		bool "No input"
-	config NUC970_ETIMER0_CAP_PC7
-		bool "Input from PC7"
-	config NUC970_ETIMER0_CAP_PB3
-		bool "Input from PB3"
-endchoice
-
-choice
-	prompt "NUC970/N9H30 ETIMER channel 1 toggle output pin"
-	default NUC970_ETIMER1_TGL_NONE
-	depends on NUC970_ETIMER
-	help
-	  Select ETIMER channel 1 toggle output pin.
-
-	config NUC970_ETIMER1_TGL_NONE
-		bool "No output"
-	config NUC970_ETIMER1_TGL_PC8
-		bool "Output to PC8"
-	config NUC970_ETIMER1_TGL_PB0
-		bool "Output to PB0"
-endchoice
-
-choice
-	prompt "NUC970/N9H30 ETIMER channel 1 capture input pin"
-	default NUC970_ETIMER1_CAP_NONE
-	depends on NUC970_ETIMER
-	help
-	  Select ETIMER channel 1 capture input pin.
-
-	config NUC970_ETIMER1_CAP_NONE
-		bool "No input"
-	config NUC970_ETIMER1_CAP_PC9
-		bool "Input from PC9"
-	config NUC970_ETIMER1_CAP_PB1
-		bool "Input from PB1"
-endchoice
-
-choice
-	prompt "NUC970/N9H30 ETIMER channel 2 toggle output pin"
-	default NUC970_ETIMER2_TGL_NONE
-	depends on NUC970_ETIMER
-	help
-	  Select ETIMER channel 2 toggle output pin.
-
-	config NUC970_ETIMER2_TGL_NONE
-		bool "No output"
-	config NUC970_ETIMER2_TGL_PC10
-		bool "Output to PC10"
-	config NUC970_ETIMER2_TGL_PF11
-		bool "Output to PF11"
-endchoice
-
-choice
-	prompt "NUC970/N9H30 ETIMER channel 2 capture input pin"
-	default NUC970_ETIMER2_CAP_NONE
-	depends on NUC970_ETIMER
-	help
-	  Select ETIMER channel 2 capture input pin.
-
-	config NUC970_ETIMER2_CAP_NONE
-		bool "No input"
-	config NUC970_ETIMER2_CAP_PC11
-		bool "Input from PC11"
-	config NUC970_ETIMER2_CAP_PF12
-		bool "Input from PBF12"
-endchoice
-
-choice
-	prompt "NUC970/N9H30 ETIMER channel 3 toggle output pin"
-	default NUC970_ETIMER3_TGL_NONE
-	depends on NUC970_ETIMER
-	help
-	  Select ETIMER channel 3 toggle output pin.
-
-	config NUC970_ETIMER3_TGL_NONE
-		bool "No output"
-	config NUC970_ETIMER3_TGL_PC12
-		bool "Output to PC12"
-	config NUC970_ETIMER3_TGL_PF13
-		bool "Output to PF13"
-endchoice
-
-choice
-	prompt "NUC970/N9H30 ETIMER channel 3 capture input pin"
-	default NUC970_ETIMER3_CAP_NONE
-	depends on NUC970_ETIMER
-	help
-	  Select ETIMER channel 3 capture input pin.
-
-	config NUC970_ETIMER3_CAP_NONE
-		bool "No input"
-	config NUC970_ETIMER3_CAP_PC13
-		bool "Input from PC13"
-	config NUC970_ETIMER3_CAP_PF14
-		bool "Input from PF14"
-endchoice
-
-
 config SENSORS_LIS3LV02D
 	tristate
 	depends on INPUT
@@ -269,15 +51,6 @@ config AD525X_DPOT_SPI
 	  To compile this driver as a module, choose M here: the
 	  module will be called ad525x_dpot-spi.
 
-config ATMEL_PWM
-	tristate "Atmel AT32/AT91 PWM support"
-	depends on HAVE_CLK
-	help
-	  This option enables device driver support for the PWM channels
-	  on certain Atmel processors.  Pulse Width Modulation is used for
-	  purposes including software controlled power-efficient backlights
-	  on LCD displays, motor control, and waveform generation.
-
 config ATMEL_TCLIB
 	bool "Atmel AT32/AT91 Timer/Counter Library"
 	depends on (AVR32 || ARCH_AT91)
@@ -302,7 +75,7 @@ config ATMEL_TCB_CLKSRC
 config ATMEL_TCB_CLKSRC_BLOCK
 	int
 	depends on ATMEL_TCB_CLKSRC
-	prompt "TC Block" if ARCH_AT91RM9200 || ARCH_AT91SAM9260 || CPU_AT32AP700X
+	prompt "TC Block" if CPU_AT32AP700X
 	default 0
 	range 0 1
 	help
@@ -353,7 +126,7 @@ config PHANTOM
 
 config INTEL_MID_PTI
 	tristate "Parallel Trace Interface for MIPI P1149.7 cJTAG standard"
-	depends on PCI && TTY
+	depends on PCI && TTY && (X86_INTEL_MID || COMPILE_TEST)
 	default n
 	help
 	  The PTI (Parallel Trace Interface) driver directs
@@ -418,7 +191,7 @@ config ICS932S401
 
 config ATMEL_SSC
 	tristate "Device driver for Atmel SSC peripheral"
-	depends on HAS_IOMEM
+	depends on HAS_IOMEM && (AVR32 || ARCH_AT91 || COMPILE_TEST)
 	---help---
 	  This option enables device driver support for Atmel Synchronized
 	  Serial Communication peripheral (SSC).
@@ -453,7 +226,7 @@ config SGI_XP
 
 config CS5535_MFGPT
 	tristate "CS5535/CS5536 Geode Multi-Function General Purpose Timer (MFGPT) support"
-	depends on PCI && X86 && MFD_CS5535
+	depends on MFD_CS5535
 	default n
 	help
 	  This driver provides access to MFGPT functionality for other
@@ -498,6 +271,16 @@ config HP_ILO
 	  To compile this driver as a module, choose M here: the
 	  module will be called hpilo.
 
+config QCOM_COINCELL
+	tristate "Qualcomm coincell charger support"
+	depends on MFD_SPMI_PMIC || COMPILE_TEST
+	help
+	  This driver supports the coincell block found inside of
+	  Qualcomm PMICs.  The coincell charger provides a means to
+	  charge a coincell battery or backup capacitor which is used
+	  to maintain PMIC register and RTC state in the absence of
+	  external power.
+
 config SGI_GRU
 	tristate "SGI GRU driver"
 	depends on X86_UV && SMP
@@ -518,8 +301,8 @@ config SGI_GRU_DEBUG
 	depends on SGI_GRU
 	default n
 	---help---
-	This option enables addition debugging code for the SGI GRU driver. If
-	you are unsure, say N.
+	This option enables additional debugging code for the SGI GRU driver.
+	If you are unsure, say N.
 
 config APDS9802ALS
 	tristate "Medfield Avago APDS9802 ALS Sensor module"
@@ -599,19 +382,6 @@ config HMC6352
 	  This driver provides support for the Honeywell HMC6352 compass,
 	  providing configuration and heading data via sysfs.
 
-config EP93XX_PWM
-	tristate "EP93xx PWM support"
-	depends on ARCH_EP93XX
-	help
-	  This option enables device driver support for the PWM channels
-	  on the Cirrus EP93xx processors.  The EP9307 chip only has one
-	  PWM channel all the others have two, the second channel is an
-	  alternate function of the EGPIO14 pin.  A sysfs interface is
-	  provided to control the PWM channels.
-
-	  To compile this driver as a module, choose M here: the module will
-	  be called ep93xx_pwm.
-
 config DS1682
 	tristate "Dallas DS1682 Total Elapsed Time Recorder with Alarm"
 	depends on I2C
@@ -644,7 +414,7 @@ config TI_DAC7512
 
 config VMWARE_BALLOON
 	tristate "VMware Balloon Driver"
-	depends on X86 && HYPERVISOR_GUEST
+	depends on VMWARE_VMCI && X86 && HYPERVISOR_GUEST
 	help
 	  This is VMware physical memory management driver which acts
 	  like a "balloon" that can be inflated to reclaim physical pages
@@ -698,7 +468,8 @@ config BMP085_SPI
 
 config PCH_PHUB
 	tristate "Intel EG20T PCH/LAPIS Semicon IOH(ML7213/ML7223/ML7831) PHUB"
-	depends on PCI
+	select GENERIC_NET_UTILS
+	depends on PCI && (X86_32 || COMPILE_TEST)
 	help
 	  This driver is for PCH(Platform controller Hub) PHUB(Packet Hub) of
 	  Intel Topcliff which is an IOH(Input/Output Hub) for x86 embedded
@@ -745,55 +516,25 @@ config SRAM
 	  the genalloc API. It is supposed to be used for small on-chip SRAM
 	  areas found on many SoCs.
 
-config NUC970_EBI
-        bool "NUC970/N9H30 EBI driver"
-        depends on ARCH_NUC970
-        select GENERIC_ALLOCATOR
-        help
-        Driver for NUC970/N9H30 EBI controller.
-        Used to configure the EBI (external bus interface) when the device-
-        tree is used. This bus supports external ethernet controller,
-        SRAMs etc.
-
-config NUC970_EBI_CS0
-	bool "Using EBI CS0"
-	depends on NUC970_EBI
+config VEXPRESS_SYSCFG
+	bool "Versatile Express System Configuration driver"
+	depends on VEXPRESS_CONFIG
 	default y
 	help
-	 Select EBI chip select 0.
-config NUC970_EBI_CS1
-        bool "Using EBI CS1"
-        depends on NUC970_EBI
-	default n
-        help
-         Select EBI chip select 1.
-config NUC970_EBI_CS2
-        bool "Using EBI CS2"
-        depends on NUC970_EBI
-	default n
-        help
-         Select EBI chip select 2.
-config NUC970_EBI_CS3
-        bool "Using EBI CS3"
-        depends on NUC970_EBI
-	default n
-        help
-         Select EBI chip select 3.
-config NUC970_EBI_CS4
-        bool "Using EBI CS4"
-        depends on NUC970_EBI
-        default n
-        help
-         Select EBI chip select 4.
-
+	  ARM Ltd. Versatile Express uses specialised platform configuration
+	  bus. System Configuration interface is one of the possible means
+	  of generating transactions on this bus.
 
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"
 source "drivers/misc/ti-st/Kconfig"
 source "drivers/misc/lis3lv02d/Kconfig"
-source "drivers/misc/carma/Kconfig"
 source "drivers/misc/altera-stapl/Kconfig"
 source "drivers/misc/mei/Kconfig"
 source "drivers/misc/vmw_vmci/Kconfig"
+source "drivers/misc/mic/Kconfig"
+source "drivers/misc/genwqe/Kconfig"
+source "drivers/misc/echo/Kconfig"
+source "drivers/misc/cxl/Kconfig"
 endmenu

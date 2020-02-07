@@ -17,12 +17,6 @@ config IRTTY_SIR
 
 	  If unsure, say Y.
 
-config NUC970_SIR
-	tristate "NUC970/N9H30 SIR on UART"
-	depends on IRDA && TTY
-	help
-      Enable SIR function device on NUC970/N9H30 UART devcies.
-
 config BFIN_SIR
 	tristate "Blackfin SIR on UART"
 	depends on BLACKFIN && IRDA
@@ -68,8 +62,6 @@ config SIR_BFIN_PIO
 	bool "PIO mode"
 endchoice
 
-comment "Dongle support"
-
 config SH_SIR
 	tristate "SuperH SIR on UART"
 	depends on IRDA && SUPERH && \
@@ -79,6 +71,8 @@ config SH_SIR
 	help
 	  Say Y here if your want to enable SIR function on SuperH UART
 	  devices.
+
+comment "Dongle support"
 
 config DONGLE
 	bool "Serial dongle support"
@@ -216,13 +210,6 @@ config KINGSUN_DONGLE
 	  To compile it as a module, choose M here: the module will be called
 	  kingsun-sir.
 
-config EP7211_DONGLE
-	tristate "Cirrus Logic clps711x I/R support"
-	depends on IRTTY_SIR && ARCH_CLPS711X && IRDA
-	help
-	  Say Y here if you want to build support for the Cirrus logic
-	  EP7211 chipset's infrared module.
-
 config KSDAZZLE_DONGLE
 	tristate "KingSun Dazzle IrDA-USB dongle"
 	depends on IRDA && USB
@@ -275,12 +262,12 @@ config SIGMATEL_FIR
 	select CRC32
 	---help---
 	  Say Y here if you want to build support for the SigmaTel STIr4200
-	  USB IrDA FIR bridge device driver.
+	  USB IrDA FIR bridge device driver.  
 
 	  USB bridge based on the SigmaTel STIr4200 don't conform to the
 	  IrDA-USB device class specification, and therefore need their
 	  own specific driver. Those dongles support SIR and FIR (4Mbps)
-	  speeds.
+	  speeds. 
 
 	  To compile it as a module, choose M here: the module will be called
 	  stir4200.
@@ -409,8 +396,10 @@ config MCS_FIR
 
 config SH_IRDA
 	tristate "SuperH IrDA driver"
-	depends on IRDA && ARCH_SHMOBILE
+	depends on IRDA
+	depends on (ARCH_SHMOBILE || COMPILE_TEST) && HAS_IOMEM
 	help
 	  Say Y here if your want to enable SuperH IrDA devices.
 
 endmenu
+

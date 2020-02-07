@@ -10,6 +10,8 @@
  *
  * ------------------------------------------------------------------------- */
 
+#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
+
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/fs.h>
@@ -126,6 +128,7 @@ static const match_table_t tokens = {
 struct pts_fs_info {
 	struct ida allocated_ptys;
 	struct pts_mount_opts mount_opts;
+	struct super_block *sb;
 	struct dentry *ptmx_dentry;
 };
 
@@ -140,6 +143,8 @@ static inline struct super_block *pts_sb_from_inode(struct inode *inode)
 	if (inode->i_sb->s_magic == DEVPTS_SUPER_MAGIC)
 		return inode->i_sb;
 #endif
+	if (!devpts_mnt)
+		return NULL;
 	return devpts_mnt->mnt_sb;
 }
 
@@ -148,10 +153,10 @@ static inline struct super_block *pts_sb_from_inode(struct inode *inode)
 
 /*
  * parse_mount_options():
- * 	Set @opts to mount options specified in @data. If an option is not
- * 	specified in @data, set it to its default value. The exception is
- * 	'newinstance' option which can only be set/cleared on a mount (i.e.
- * 	cannot be changed during remount).
+ *	Set @opts to mount options specified in @data. If an option is not
+ *	specified in @data, set it to its default value. The exception is
+ *	'newinstance' option which can only be set/cleared on a mount (i.e.
+ *	cannot be changed during remount).
  *
  * Note: @data may be NULL (in which case all options are set to default).
  */
@@ -225,7 +230,7 @@ static int parse_mount_options(char *data, int op, struct pts_mount_opts *opts)
 			break;
 #endif
 		default:
-			printk(KERN_ERR "devpts: called with bogus options\n");
+			pr_err("called with bogus options\n");
 			return -EINVAL;
 		}
 	}
@@ -251,7 +256,7 @@ static int mknod_ptmx(struct super_block *sb)
 	if (!uid_valid(root_uid) || !gid_valid(root_gid))
 		return -EINVAL;
 
-	mutex_lock(&root->d_inode->i_mutex);
+	mutex_lock(&d_inode(root)->i_mutex);
 
 	/* If we have already created ptmx node, return */
 	if (fsi->ptmx_dentry) {
@@ -261,7 +266,7 @@ static int mknod_ptmx(struct super_block *sb)
 
 	dentry = d_alloc_name(root, "ptmx");
 	if (!dentry) {
-		printk(KERN_NOTICE "Unable to alloc dentry for ptmx node\n");
+		pr_err("Unable to alloc dentry for ptmx node\n");
 		goto out;
 	}
 
@@ -270,7 +275,7 @@ static int mknod_ptmx(struct super_block *sb)
 	 */
 	inode = new_inode(sb);
 	if (!inode) {
-		printk(KERN_ERR "Unable to alloc inode for ptmx node\n");
+		pr_err("Unable to alloc inode for ptmx node\n");
 		dput(dentry);
 		goto out;
 	}
@@ -288,7 +293,7 @@ static int mknod_ptmx(struct super_block *sb)
 	fsi->ptmx_dentry = dentry;
 	rc = 0;
 out:
-	mutex_unlock(&root->d_inode->i_mutex);
+	mutex_unlock(&d_inode(root)->i_mutex);
 	return rc;
 }
 
@@ -296,14 +301,14 @@ static void update_ptmx_mode(struct pts_fs_info *fsi)
 {
 	struct inode *inode;
 	if (fsi->ptmx_dentry) {
-		inode = fsi->ptmx_dentry->d_inode;
+		inode = d_inode(fsi->ptmx_dentry);
 		inode->i_mode = S_IFCHR|fsi->mount_opts.ptmxmode;
 	}
 }
 #else
 static inline void update_ptmx_mode(struct pts_fs_info *fsi)
 {
-       return;
+	return;
 }
 #endif
 
@@ -313,6 +318,7 @@ static int devpts_remount(struct super_block *sb, int *flags, char *data)
 	struct pts_fs_info *fsi = DEVPTS_SB(sb);
 	struct pts_mount_opts *opts = &fsi->mount_opts;
 
+	sync_filesystem(sb);
 	err = parse_mount_options(data, PARSE_REMOUNT, opts);
 
 	/*
@@ -332,9 +338,11 @@ static int devpts_show_options(struct seq_file *seq, struct dentry *root)
 	struct pts_mount_opts *opts = &fsi->mount_opts;
 
 	if (opts->setuid)
-		seq_printf(seq, ",uid=%u", from_kuid_munged(&init_user_ns, opts->uid));
+		seq_printf(seq, ",uid=%u",
+			   from_kuid_munged(&init_user_ns, opts->uid));
 	if (opts->setgid)
-		seq_printf(seq, ",gid=%u", from_kgid_munged(&init_user_ns, opts->gid));
+		seq_printf(seq, ",gid=%u",
+			   from_kgid_munged(&init_user_ns, opts->gid));
 	seq_printf(seq, ",mode=%03o", opts->mode);
 #ifdef CONFIG_DEVPTS_MULTIPLE_INSTANCES
 	seq_printf(seq, ",ptmxmode=%03o", opts->ptmxmode);
@@ -351,7 +359,7 @@ static const struct super_operations devpts_sops = {
 	.show_options	= devpts_show_options,
 };
 
-static void *new_pts_fs_info(void)
+static void *new_pts_fs_info(struct super_block *sb)
 {
 	struct pts_fs_info *fsi;
 
@@ -362,6 +370,7 @@ static void *new_pts_fs_info(void)
 	ida_init(&fsi->allocated_ptys);
 	fsi->mount_opts.mode = DEVPTS_DEFAULT_MODE;
 	fsi->mount_opts.ptmxmode = DEVPTS_DEFAULT_PTMX_MODE;
+	fsi->sb = sb;
 
 	return fsi;
 }
@@ -377,7 +386,7 @@ devpts_fill_super(struct super_block *s, void *data, int silent)
 	s->s_op = &devpts_sops;
 	s->s_time_gran = 1;
 
-	s->s_fs_info = new_pts_fs_info();
+	s->s_fs_info = new_pts_fs_info(s);
 	if (!s->s_fs_info)
 		goto fail;
 
@@ -395,7 +404,7 @@ devpts_fill_super(struct super_block *s, void *data, int silent)
 	if (s->s_root)
 		return 0;
 
-	printk(KERN_ERR "devpts: get root dentry failed\n");
+	pr_err("get root dentry failed\n");
 
 fail:
 	return -ENOMEM;
@@ -517,12 +526,13 @@ static struct file_system_type devpts_fs_type = {
  * to the System V naming convention
  */
 
-int devpts_new_index(struct inode *ptmx_inode)
+int devpts_new_index(struct pts_fs_info *fsi)
 {
-	struct super_block *sb = pts_sb_from_inode(ptmx_inode);
-	struct pts_fs_info *fsi = DEVPTS_SB(sb);
 	int index;
 	int ida_ret;
+
+	if (!fsi)
+		return -ENODEV;
 
 retry:
 	if (!ida_pre_get(&fsi->allocated_ptys, GFP_KERNEL))
@@ -553,11 +563,8 @@ retry:
 	return index;
 }
 
-void devpts_kill_index(struct inode *ptmx_inode, int idx)
+void devpts_kill_index(struct pts_fs_info *fsi, int idx)
 {
-	struct super_block *sb = pts_sb_from_inode(ptmx_inode);
-	struct pts_fs_info *fsi = DEVPTS_SB(sb);
-
 	mutex_lock(&allocated_ptys_lock);
 	ida_remove(&fsi->allocated_ptys, idx);
 	pty_count--;
@@ -567,21 +574,25 @@ void devpts_kill_index(struct inode *ptmx_inode, int idx)
 /*
  * pty code needs to hold extra references in case of last /dev/tty close
  */
-
-void devpts_add_ref(struct inode *ptmx_inode)
+struct pts_fs_info *devpts_get_ref(struct inode *ptmx_inode, struct file *file)
 {
-	struct super_block *sb = pts_sb_from_inode(ptmx_inode);
+	struct super_block *sb;
+	struct pts_fs_info *fsi;
+
+	sb = pts_sb_from_inode(ptmx_inode);
+	if (!sb)
+		return NULL;
+	fsi = DEVPTS_SB(sb);
+	if (!fsi)
+		return NULL;
 
 	atomic_inc(&sb->s_active);
-	ihold(ptmx_inode);
+	return fsi;
 }
 
-void devpts_del_ref(struct inode *ptmx_inode)
+void devpts_put_ref(struct pts_fs_info *fsi)
 {
-	struct super_block *sb = pts_sb_from_inode(ptmx_inode);
-
-	iput(ptmx_inode);
-	deactivate_super(sb);
+	deactivate_super(fsi->sb);
 }
 
 /**
@@ -593,16 +604,22 @@ void devpts_del_ref(struct inode *ptmx_inode)
  *
  * The created inode is returned. Remove it from /dev/pts/ by devpts_pty_kill.
  */
-struct inode *devpts_pty_new(struct inode *ptmx_inode, dev_t device, int index,
+struct inode *devpts_pty_new(struct pts_fs_info *fsi, dev_t device, int index,
 		void *priv)
 {
 	struct dentry *dentry;
-	struct super_block *sb = pts_sb_from_inode(ptmx_inode);
+	struct super_block *sb;
 	struct inode *inode;
-	struct dentry *root = sb->s_root;
-	struct pts_fs_info *fsi = DEVPTS_SB(sb);
-	struct pts_mount_opts *opts = &fsi->mount_opts;
+	struct dentry *root;
+	struct pts_mount_opts *opts;
 	char s[12];
+
+	if (!fsi)
+		return ERR_PTR(-ENODEV);
+
+	sb = fsi->sb;
+	root = sb->s_root;
+	opts = &fsi->mount_opts;
 
 	inode = new_inode(sb);
 	if (!inode)
@@ -617,18 +634,18 @@ struct inode *devpts_pty_new(struct inode *ptmx_inode, dev_t device, int index,
 
 	sprintf(s, "%d", index);
 
-	mutex_lock(&root->d_inode->i_mutex);
+	mutex_lock(&d_inode(root)->i_mutex);
 
 	dentry = d_alloc_name(root, s);
 	if (dentry) {
 		d_add(dentry, inode);
-		fsnotify_create(root->d_inode, dentry);
+		fsnotify_create(d_inode(root), dentry);
 	} else {
 		iput(inode);
 		inode = ERR_PTR(-ENOMEM);
 	}
 
-	mutex_unlock(&root->d_inode->i_mutex);
+	mutex_unlock(&d_inode(root)->i_mutex);
 
 	return inode;
 }
@@ -673,7 +690,7 @@ void devpts_pty_kill(struct inode *inode)
 
 	BUG_ON(inode->i_rdev == MKDEV(TTYAUX_MAJOR, PTMX_MINOR));
 
-	mutex_lock(&root->d_inode->i_mutex);
+	mutex_lock(&d_inode(root)->i_mutex);
 
 	dentry = d_find_alias(inode);
 
@@ -682,7 +699,7 @@ void devpts_pty_kill(struct inode *inode)
 	dput(dentry);	/* d_alloc_name() in devpts_pty_new() */
 	dput(dentry);		/* d_find_alias above */
 
-	mutex_unlock(&root->d_inode->i_mutex);
+	mutex_unlock(&d_inode(root)->i_mutex);
 }
 
 static int __init init_devpts_fs(void)
@@ -691,12 +708,16 @@ static int __init init_devpts_fs(void)
 	struct ctl_table_header *table;
 
 	if (!err) {
+		struct vfsmount *mnt;
+
 		table = register_sysctl_table(pty_root_table);
-		devpts_mnt = kern_mount(&devpts_fs_type);
-		if (IS_ERR(devpts_mnt)) {
-			err = PTR_ERR(devpts_mnt);
+		mnt = kern_mount(&devpts_fs_type);
+		if (IS_ERR(mnt)) {
+			err = PTR_ERR(mnt);
 			unregister_filesystem(&devpts_fs_type);
 			unregister_sysctl_table(table);
+		} else {
+			devpts_mnt = mnt;
 		}
 	}
 	return err;

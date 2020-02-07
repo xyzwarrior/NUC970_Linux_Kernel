@@ -24,6 +24,7 @@
 #include <crypto/algapi.h>
 #include <linux/err.h>
 #include <linux/module.h>
+#include <linux/cpufeature.h>
 #include <linux/init.h>
 #include <linux/spinlock.h>
 #include "crypt_s390.h"
@@ -134,7 +135,7 @@ static int aes_set_key(struct crypto_tfm *tfm, const u8 *in_key,
 
 static void aes_encrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
 {
-	const struct s390_aes_ctx *sctx = crypto_tfm_ctx(tfm);
+	struct s390_aes_ctx *sctx = crypto_tfm_ctx(tfm);
 
 	if (unlikely(need_fallback(sctx->key_len))) {
 		crypto_cipher_encrypt_one(sctx->fallback.cip, out, in);
@@ -159,7 +160,7 @@ static void aes_encrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
 
 static void aes_decrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
 {
-	const struct s390_aes_ctx *sctx = crypto_tfm_ctx(tfm);
+	struct s390_aes_ctx *sctx = crypto_tfm_ctx(tfm);
 
 	if (unlikely(need_fallback(sctx->key_len))) {
 		crypto_cipher_decrypt_one(sctx->fallback.cip, out, in);
@@ -735,6 +736,8 @@ static struct crypto_alg xts_aes_alg = {
 	}
 };
 
+static int xts_aes_alg_reg;
+
 static int ctr_aes_set_key(struct crypto_tfm *tfm, const u8 *in_key,
 			   unsigned int key_len)
 {
@@ -884,6 +887,8 @@ static struct crypto_alg ctr_aes_alg = {
 	}
 };
 
+static int ctr_aes_alg_reg;
+
 static int __init aes_s390_init(void)
 {
 	int ret;
@@ -922,6 +927,7 @@ static int __init aes_s390_init(void)
 		ret = crypto_register_alg(&xts_aes_alg);
 		if (ret)
 			goto xts_aes_err;
+		xts_aes_alg_reg = 1;
 	}
 
 	if (crypt_s390_func_available(KMCTR_AES_128_ENCRYPT,
@@ -940,6 +946,7 @@ static int __init aes_s390_init(void)
 			free_page((unsigned long) ctrblk);
 			goto ctr_aes_err;
 		}
+		ctr_aes_alg_reg = 1;
 	}
 
 out:
@@ -959,15 +966,18 @@ aes_err:
 
 static void __exit aes_s390_fini(void)
 {
-	crypto_unregister_alg(&ctr_aes_alg);
-	free_page((unsigned long) ctrblk);
-	crypto_unregister_alg(&xts_aes_alg);
+	if (ctr_aes_alg_reg) {
+		crypto_unregister_alg(&ctr_aes_alg);
+		free_page((unsigned long) ctrblk);
+	}
+	if (xts_aes_alg_reg)
+		crypto_unregister_alg(&xts_aes_alg);
 	crypto_unregister_alg(&cbc_aes_alg);
 	crypto_unregister_alg(&ecb_aes_alg);
 	crypto_unregister_alg(&aes_alg);
 }
 
-module_init(aes_s390_init);
+module_cpu_feature_match(MSA, aes_s390_init);
 module_exit(aes_s390_fini);
 
 MODULE_ALIAS_CRYPTO("aes-all");

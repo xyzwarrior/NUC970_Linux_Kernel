@@ -283,20 +283,6 @@ out:
 	return 0;
 }
 
-static struct pci_dev *pcie_find_root_port(struct pci_dev *dev)
-{
-	while (1) {
-		if (!pci_is_pcie(dev))
-			break;
-		if (pci_pcie_type(dev) == PCI_EXP_TYPE_ROOT_PORT)
-			return dev;
-		if (!dev->bus->self)
-			break;
-		dev = dev->bus->self;
-	}
-	return NULL;
-}
-
 static int find_aer_device_iter(struct device *device, void *data)
 {
 	struct pcie_device **result = data;
@@ -397,16 +383,14 @@ static int aer_inject(struct aer_error_inj *einj)
 	if (!aer_mask_override && einj->cor_status &&
 	    !(einj->cor_status & ~cor_mask)) {
 		ret = -EINVAL;
-		printk(KERN_WARNING "The correctable error(s) is masked "
-				"by device\n");
+		printk(KERN_WARNING "The correctable error(s) is masked by device\n");
 		spin_unlock_irqrestore(&inject_lock, flags);
 		goto out_put;
 	}
 	if (!aer_mask_override && einj->uncor_status &&
 	    !(einj->uncor_status & ~uncor_mask)) {
 		ret = -EINVAL;
-		printk(KERN_WARNING "The uncorrectable error(s) is masked "
-				"by device\n");
+		printk(KERN_WARNING "The uncorrectable error(s) is masked by device\n");
 		spin_unlock_irqrestore(&inject_lock, flags);
 		goto out_put;
 	}
@@ -464,8 +448,7 @@ static int aer_inject(struct aer_error_inj *einj)
 			goto out_put;
 		}
 		aer_irq(-1, edev);
-	}
-	else
+	} else
 		ret = -EINVAL;
 out_put:
 	kfree(err_alloc);

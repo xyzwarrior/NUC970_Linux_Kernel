@@ -25,7 +25,7 @@
 ENTRY(__set_fiq_regs)
 	mov	r2, #PSR_I_BIT | PSR_F_BIT | FIQ_MODE
 	mrs	r1, cpsr
-	and	r1, #~PSR_F_BIT     @ enable F bit
+	and     r1, #~PSR_F_BIT   @enable F bit
 	msr	cpsr_c, r2	@ select FIQ mode
 	mov	r0, r0		@ avoid hazard prior to ARMv4
 	ldmia	r0!, {r8 - r12}
@@ -33,7 +33,7 @@ ENTRY(__set_fiq_regs)
 	ldr	lr, [r0]
 	msr	cpsr_c, r1	@ return to SVC mode
 	mov	r0, r0		@ avoid hazard prior to ARMv4
-	mov	pc, lr
+	ret	lr
 ENDPROC(__set_fiq_regs)
 
 ENTRY(__get_fiq_regs)
@@ -46,5 +46,5 @@ ENTRY(__get_fiq_regs)
 	str	lr, [r0]
 	msr	cpsr_c, r1	@ return to SVC mode
 	mov	r0, r0		@ avoid hazard prior to ARMv4
-	mov	pc, lr
+	ret	lr
 ENDPROC(__get_fiq_regs)

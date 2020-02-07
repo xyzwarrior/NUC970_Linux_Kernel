@@ -16,6 +16,7 @@
  *
  */
 
+#include <linux/reboot.h>
 #include <linux/clkdev.h>
 #include <linux/of.h>
 
@@ -31,7 +32,7 @@ extern void __init nuc970_dt_initialize(void);
 
 extern int __init nuc970_dt_clock_init(void);
 
-extern void nuc970_restart(char mode, const char *cmd);
+extern void nuc970_restart(/*char*/ enum reboot_mode mode, const char *cmd);
 
 extern void __init nuc970_timer_init_dt(void);
 

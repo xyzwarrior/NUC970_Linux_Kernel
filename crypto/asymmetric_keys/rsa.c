@@ -74,13 +74,13 @@ static const struct {
 	size_t size;
 } RSA_ASN1_templates[PKEY_HASH__LAST] = {
 #define _(X) { RSA_digest_info_##X, sizeof(RSA_digest_info_##X) }
-	[PKEY_HASH_MD5]		= _(MD5),
-	[PKEY_HASH_SHA1]	= _(SHA1),
-	[PKEY_HASH_RIPE_MD_160]	= _(RIPE_MD_160),
-	[PKEY_HASH_SHA256]	= _(SHA256),
-	[PKEY_HASH_SHA384]	= _(SHA384),
-	[PKEY_HASH_SHA512]	= _(SHA512),
-	[PKEY_HASH_SHA224]	= _(SHA224),
+	[HASH_ALGO_MD5]		= _(MD5),
+	[HASH_ALGO_SHA1]	= _(SHA1),
+	[HASH_ALGO_RIPE_MD_160]	= _(RIPE_MD_160),
+	[HASH_ALGO_SHA256]	= _(SHA256),
+	[HASH_ALGO_SHA384]	= _(SHA384),
+	[HASH_ALGO_SHA512]	= _(SHA512),
+	[HASH_ALGO_SHA224]	= _(SHA224),
 #undef _
 };
 
@@ -120,7 +120,7 @@ static int RSAVP1(const struct public_key *key, MPI s, MPI *_m)
 /*
  * Integer to Octet String conversion [RFC3447 sec 4.1]
  */
-static int RSA_I2OSP(MPI x, size_t xLen, u8 **_X)
+static int RSA_I2OSP(MPI x, size_t xLen, u8 **pX)
 {
 	unsigned X_size, x_size;
 	int X_sign;
@@ -147,7 +147,7 @@ static int RSA_I2OSP(MPI x, size_t xLen, u8 **_X)
 		return -EBADMSG;
 	}
 
-	*_X = X;
+	*pX = X;
 	return 0;
 }
 

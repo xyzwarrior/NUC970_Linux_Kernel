@@ -41,9 +41,9 @@ extern int nuc970_sys_suspend_sz;
 
 static int nuc970_suspend_enter(suspend_state_t state)
 {
-	u32 upll_div;
+
 	#ifdef PM_FROM_SRAM
-	int (*nuc970_suspend_ptr) (int,int,int,int);
+	int (*nuc970_suspend_ptr) (void);
 	void *sram_swap_area;
 	#endif
 
@@ -52,21 +52,7 @@ static int nuc970_suspend_enter(suspend_state_t state)
 
 	__raw_writel(__raw_readl(REG_CLK_PMCON) & ~1, REG_CLK_PMCON);	// clear bit 0 so NUC970 enter pd mode instead of idle in next function call
 	#ifndef PM_FROM_SRAM
-	upll_div=__raw_readl(NUC970_VA_CLK+0x64);
-	__raw_writel(0xC0000015,NUC970_VA_CLK+0x64); //Set UPLL to 264Mhz
-	udelay(2);
-	__raw_writel(0xffff,NUC970_VA_CLK+0x80);
-	__raw_writel(__raw_readl(NUC970_VA_EBI_SDIC+0x18)|0x100,NUC970_VA_EBI_SDIC+0x18);	//Enable Reset DLL(bit[8]) of DDR2
-	udelay(2);
-	__raw_writel(__raw_readl(NUC970_VA_EBI_SDIC+0x18)&~0x100,NUC970_VA_EBI_SDIC+0x18);	//Disable Reset DLL(bit[8]) of DDR2
-	udelay(2);
-	__raw_writel(__raw_readl(NUC970_VA_EBI_SDIC+0x00) & ~0x10000,NUC970_VA_EBI_SDIC+0x00);	//Set SDIC_OPMCTL[16] low to disable auto power down mode
-	__raw_writel(__raw_readl(NUC970_VA_EBI_SDIC+0x04) & ~0x20,NUC970_VA_EBI_SDIC+0x04);
-	cpu_do_idle();
-	__raw_writel(__raw_readl(NUC970_VA_EBI_SDIC+0x04) | 0x20,NUC970_VA_EBI_SDIC+0x04);
-	__raw_writel(__raw_readl(NUC970_VA_EBI_SDIC+0x00) | 0x10000,NUC970_VA_EBI_SDIC+0x00);	//Set SDIC_OPMCTL[16] high to enable auto power down mode
-	__raw_writel(upll_div,NUC970_VA_CLK+0x64); //Restore UPLL
-	udelay(2);
+		cpu_do_idle();
 	#else
 	/* Allocate some space for temporary SRAM storage */
 	sram_swap_area = kmalloc(nuc970_sys_suspend_sz, GFP_KERNEL);
@@ -87,7 +73,7 @@ static int nuc970_suspend_enter(suspend_state_t state)
 	flush_icache_range((unsigned long)TEMP_SRAM_AREA,(unsigned long)(TEMP_SRAM_AREA) + nuc970_sys_suspend_sz);
 	nuc970_suspend_ptr = (void *) TEMP_SRAM_AREA;
 	flush_cache_all();
-	(void) nuc970_suspend_ptr(0,0,0,0);
+	(void) nuc970_suspend_ptr();
 
 	/* Restore original SRAM contents */
 	memcpy((void *) TEMP_SRAM_AREA, sram_swap_area,nuc970_sys_suspend_sz);

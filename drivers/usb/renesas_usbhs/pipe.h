@@ -55,9 +55,9 @@ struct usbhs_pipe_info {
  * pipe list
  */
 #define __usbhs_for_each_pipe(start, pos, info, i)	\
-	for (i = start, pos = (info)->pipe + i;		\
-	     i < (info)->size;				\
-	     i++, pos = (info)->pipe + i)
+	for ((i) = start;						\
+	     ((i) < (info)->size) && ((pos) = (info)->pipe + (i));	\
+	     (i)++)
 
 #define usbhs_for_each_pipe(pos, priv, i)			\
 	__usbhs_for_each_pipe(1, pos, &((priv)->pipe_info), i)
@@ -76,6 +76,7 @@ struct usbhs_pipe_info {
 char *usbhs_pipe_name(struct usbhs_pipe *pipe);
 struct usbhs_pipe
 *usbhs_pipe_malloc(struct usbhs_priv *priv, int endpoint_type, int dir_in);
+void usbhs_pipe_free(struct usbhs_pipe *pipe);
 int usbhs_pipe_probe(struct usbhs_priv *priv);
 void usbhs_pipe_remove(struct usbhs_priv *priv);
 int usbhs_pipe_is_dir_in(struct usbhs_pipe *pipe);
@@ -96,6 +97,7 @@ void usbhs_pipe_set_trans_count_if_bulk(struct usbhs_pipe *pipe, int len);
 void usbhs_pipe_select_fifo(struct usbhs_pipe *pipe, struct usbhs_fifo *fifo);
 void usbhs_pipe_config_update(struct usbhs_pipe *pipe, u16 devsel,
 			      u16 epnum, u16 maxp);
+void usbhs_pipe_config_change_bfre(struct usbhs_pipe *pipe, int enable);
 
 #define usbhs_pipe_sequence_data0(pipe)	usbhs_pipe_data_sequence(pipe, 0)
 #define usbhs_pipe_sequence_data1(pipe)	usbhs_pipe_data_sequence(pipe, 1)

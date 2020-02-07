@@ -64,6 +64,14 @@
 
 static unsigned int timer0_load;
 
+enum clock_event_mode {
+  CLOCK_EVT_MODE_UNUSED = 0,
+  CLOCK_EVT_MODE_SHUTDOWN,
+  CLOCK_EVT_MODE_PERIODIC,
+  CLOCK_EVT_MODE_ONESHOT,
+  CLOCK_EVT_MODE_RESUME,
+};
+
 static void nuc970_clockevent_setmode(enum clock_event_mode mode,
 		struct clock_event_device *clk)
 {
@@ -89,6 +97,24 @@ static void nuc970_clockevent_setmode(enum clock_event_mode mode,
 	}
 
 	__raw_writel(val, REG_TMR_TCSR0);
+}
+
+static int nuc970_clockevent_shutdown(struct clock_event_device *evt)
+{
+  nuc970_clockevent_setmode(CLOCK_EVT_MODE_SHUTDOWN, evt);
+  return 0;
+}
+
+static int nuc970_clockevent_set_oneshot(struct clock_event_device *evt)
+{
+  nuc970_clockevent_setmode(CLOCK_EVT_MODE_ONESHOT, evt);
+  return 0;
+}
+
+static int nuc970_clockevent_set_periodic(struct clock_event_device *evt)
+{
+  nuc970_clockevent_setmode(CLOCK_EVT_MODE_PERIODIC, evt);
+  return 0;
 }
 
 static int nuc970_clockevent_setnextevent(unsigned long evt,
@@ -135,12 +161,16 @@ static void nuc970_clockevent_resume(struct clock_event_device *clk)
 	printk("clk event resume\n");
 }
 #endif
+
 static struct clock_event_device nuc970_clockevent_device = {
 	.name		= "nuc970-timer0",
 	.shift		= 32,
 	.features	= CLOCK_EVT_FEAT_PERIODIC | CLOCK_EVT_FEAT_ONESHOT,
-	.set_mode	= nuc970_clockevent_setmode,
-	.set_next_event	= nuc970_clockevent_setnextevent,
+//	.set_mode	= nuc970_clockevent_setmode,
+    .set_state_shutdown = nuc970_clockevent_shutdown,
+	.set_state_periodic = nuc970_clockevent_set_periodic,
+	.set_state_oneshot  = nuc970_clockevent_set_oneshot,
+	.set_next_event	    = nuc970_clockevent_setnextevent,
 #ifdef CONFIG_PM
 	.suspend	= nuc970_clockevent_suspend,
 	.resume		= nuc970_clockevent_resume,
@@ -162,7 +192,7 @@ static irqreturn_t nuc970_timer0_interrupt(int irq, void *dev_id)
 
 static struct irqaction nuc970_timer0_irq = {
 	.name		= "nuc970-timer0",
-	.flags		= IRQF_DISABLED | IRQF_TIMER | IRQF_IRQPOLL,
+	.flags		= /*IRQF_DISABLED | */IRQF_TIMER | IRQF_IRQPOLL,
 	.handler	= nuc970_timer0_interrupt,
 };
 
@@ -268,7 +298,8 @@ static void __init nuc970_clocksource_init(void)
 
 	clocksource_nuc970.mult =
 		clocksource_khz2mult((rate / 1000), clocksource_nuc970.shift);
-	clocksource_register(&clocksource_nuc970);
+//	clocksource_register(&clocksource_nuc970);
+	__clocksource_register(&clocksource_nuc970);
 }
 
 void __init nuc970_setup_default_serial_console(void)
