@@ -48,7 +48,7 @@ $(obj)/Image: vmlinux FORCE
 	$(call if_changed,objcopy)
 	@$(kecho) '  Kernel: $@ is ready'
 
-	cp $@ ../image/970image
+	#cp $@ ../image/970image
 	#zip ../image/970image.zip ../image/970image
 
 $(obj)/compressed/vmlinux: $(obj)/Image FORCE
