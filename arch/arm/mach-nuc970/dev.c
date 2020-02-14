@@ -1705,6 +1705,8 @@ static struct platform_device *nuc970_public_dev[] __initdata = {
 #if defined(CONFIG_BACKLIGHT_PWM)
     &nuc970_pwm_bl,
 #endif
+	
+	&leds_gpio,
 };
 
 
