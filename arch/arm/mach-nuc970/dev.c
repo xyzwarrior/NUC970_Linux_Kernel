@@ -1502,6 +1502,34 @@ struct platform_device nuc970_pwm_bl = {
 	},
 };
 #endif
+
+#if defined(CONFIG_LEDS_TRIGGERS) || defined(CONFIG_LEDS_TRIGGERS_MODULE)
+ 
+#if defined(CONFIG_LEDS_TRIGGER_HEARTBEAT)
+static struct gpio_led gpio_leds[]  = {
+	{
+		.name			= "heartbeat",
+		.default_trigger	= "heartbeat",
+		.gpio			= NUC970_PA10, // DP4 PA10/KPI_Col2/LD10
+	},
+};
+ 
+static struct gpio_led_platform_data gpio_led_info = {
+	.leds		= gpio_leds,
+	.num_leds	= ARRAY_SIZE(gpio_leds),
+};
+ 
+static struct platform_device leds_gpio = {
+	.name	= "leds-nuc970",
+	.id	= -1,
+	.dev	= {
+		.platform_data	= &gpio_led_info,
+	},
+};
+#endif
+ 
+#endif
+
 static struct platform_device *nuc970_public_dev[] __initdata = {
         &nuc970_serial_device0,
 
