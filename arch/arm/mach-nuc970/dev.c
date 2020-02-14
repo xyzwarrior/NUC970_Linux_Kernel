@@ -51,6 +51,8 @@
 #include <linux/i2c-gpio.h>
 #include <linux/i2c/i2c-hid.h>
 
+#include <linux/leds.h>
+
 #include <linux/platform_data/i2c-nuc970.h>
 #include <linux/platform_data/video-nuc970fb.h>
 #include <linux/platform_data/spi-nuc970.h>
