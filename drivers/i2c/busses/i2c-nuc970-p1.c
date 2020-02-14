@@ -27,7 +27,7 @@
 #include <linux/cpufreq.h>
 #include <linux/slab.h>
 #include <linux/io.h>
-#include <linux/of_i2c.h>
+#include <linux/of.h>
 
 #include <mach/mfp.h>
 #include <linux/platform_data/i2c-nuc970.h>
