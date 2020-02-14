@@ -694,7 +694,7 @@ static int nuc970_i2c1_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to add bus to i2c core\n");
 		goto err_irq;
 	}
-	of_i2c_register_devices(&i2c->adap);
+	//of_i2c_register_devices(&i2c->adap);
 
 	platform_set_drvdata(pdev, i2c);
 
