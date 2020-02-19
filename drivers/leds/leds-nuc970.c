@@ -16,7 +16,7 @@
 #include <linux/platform_data/leds-nuc970.h>
 
 #include <mach/regs-gpio.h>
-#include <plat/gpio-cfg.h>
+//#include <plat/gpio-cfg.h>
 
 /* our context */
 
