@@ -41,22 +41,22 @@ static void nuc970_led_set(struct led_classdev *led_cdev,
 	struct nuc970_gpio_led *led = to_gpio(led_cdev);
 	struct gpio_led *pd = led->pdata;
 	/*int state = (value ? 1 : 0) ^ (pd->flags & NUC970_LEDF_ACTLOW);*/
-  int state = (value ? 1: 0);
+	int state = (value ? 1: 0);
 
 	/* there will be a short delay between setting the output and
 	 * going from output to input when using tristate. */
-
-  pr_notice("nuc970_led_set: GPIO%d = %d\n", pd->gpio, state);
+	
+	//pr_notice("nuc970_led_set: GPIO%d = %d\n", pd->gpio, state);
 	gpio_set_value(pd->gpio, state);
 
 	/*
-  if (pd->flags & NUC970_LEDF_TRISTATE) {
+	if (pd->flags & NUC970_LEDF_TRISTATE) {
 		if (value)
 			gpio_direction_output(pd->gpio, state);
 		else
 			gpio_direction_input(pd->gpio);
 	}
-  */
+	*/
 }
 
 static int nuc970_led_remove(struct platform_device *dev)
@@ -70,21 +70,21 @@ static int nuc970_led_remove(struct platform_device *dev)
 
 static int nuc970_led_probe(struct platform_device *dev)
 {
-  struct gpio_led_platform_data *pdata_a = dev->dev.platform_data;
+	struct gpio_led_platform_data *pdata_a = dev->dev.platform_data;
 	struct gpio_led *pdata;
 	struct nuc970_gpio_led *led;
 	int ret;
   
-  pdata = &(pdata_a->leds[0]);
+	pdata = &(pdata_a->leds[0]);
 
 	led = devm_kzalloc(&dev->dev, sizeof(struct nuc970_gpio_led),
 			   GFP_KERNEL);
 	if (led == NULL) {
-    dev_err(&dev->dev, "No memory for device\n");
+  		dev_err(&dev->dev, "No memory for device\n");
 		return -ENOMEM;
-  }
-  
-  pr_notice("nuc970_led_probe\n");
+	}
+	
+  	pr_notice("nuc970_led_probe\n");
   
 	platform_set_drvdata(dev, led);
 
@@ -103,7 +103,7 @@ static int nuc970_led_probe(struct platform_device *dev)
 
 	//s3c_gpio_setpull(pdata->gpio, S3C_GPIO_PULL_NONE);
 
-  pr_notice("leds-nuc970: set(%s)(%d) output\n", pdata->name, pdata->gpio);
+	pr_notice("leds-nuc970: set(%s)(%d) output\n", pdata->name, pdata->gpio);
 	gpio_direction_output(pdata->gpio, 1);
   
 	/* register our new led device */
@@ -119,8 +119,8 @@ static struct platform_driver nuc970_led_driver = {
 	.probe		= nuc970_led_probe,
 	.remove		= nuc970_led_remove,
 	.driver		= {
-		.name		= "leds-nuc970",
-    .owner  = THIS_MODULE,
+		.name	= "leds-nuc970",
+		.owner  = THIS_MODULE,
 	},
 };
 
