@@ -44,8 +44,8 @@
 #define LEAVE()
 #endif
 
-//#define nuc970_sd_debug       printk
-#define nuc970_sd_debug(...)
+#define nuc970_sd_debug       printk
+//#define nuc970_sd_debug(...)
 
 #define DRIVER_NAME    "nuc970-sdh"
 
