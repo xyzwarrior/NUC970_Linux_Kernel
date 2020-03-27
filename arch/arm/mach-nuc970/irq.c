@@ -564,8 +564,9 @@ int __init nuc970_of_init_irq(struct device_node *node, struct device_node *pare
 
 	irq_set_chip_and_handler(IRQ_TMR0, &nuc970_irq_chip, handle_level_irq);
 //	set_irq_flags(IRQ_TMR0, IRQF_VALID);
-    irq_modify_status_flags(IRQ_TMR0, IRQ_NOREQUEST);
-
+//    	irq_modify_status_flags(IRQ_TMR0, IRQ_NOREQUEST);
+	irq_clear_status_flags(IRQ_TMR0, IRQ_NOREQUEST);
+	
 	//irq_set_chip_and_handler(IRQ_UART0, &nuc970_irq_chip, handle_level_irq);
 	//set_irq_flags(IRQ_UART0, IRQF_VALID);
 
