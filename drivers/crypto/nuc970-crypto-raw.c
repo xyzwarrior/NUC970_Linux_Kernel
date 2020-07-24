@@ -129,7 +129,7 @@ static long nvt_aes_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 		break;
 
 	case AES_IOC_SET_KEY:
-		copy_from_user((void *)&(crpt_regs->CRPT_AES0_KEY[0]), (const void *)arg, 32);
+		copy_from_user((void *)&(crpt_regs->CRPT_AES0_KEY0), (const void *)arg, 32);
 		//printk("AES_IOC_SET_KEY: 0x%x-0x%x-0x%x-0x%x\n", crpt_regs->CRPT_AES0_KEY[0], crpt_regs->CRPT_AES0_KEY[1], crpt_regs->CRPT_AES0_KEY[2], crpt_regs->CRPT_AES0_KEY[3]);
 		break;
 
