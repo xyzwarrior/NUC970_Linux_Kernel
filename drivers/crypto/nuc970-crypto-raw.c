@@ -124,7 +124,7 @@ static long nvt_aes_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 		break;
 
 	case AES_IOC_SET_IV:
-		copy_from_user((void *)&(crpt_regs->CRPT_AES0_IV[0]), (const void *)arg, 16);
+		copy_from_user((void *)&(crpt_regs->CRPT_AES0_IV0), (const void *)arg, 16);
 		//printk("AES_IOC_SET_IV: 0x%x-0x%x-0x%x-0x%x\n", crpt_regs->CRPT_AES0_IV[0], crpt_regs->CRPT_AES0_IV[1], crpt_regs->CRPT_AES0_IV[2], crpt_regs->CRPT_AES0_IV[3]);
 		break;
 
@@ -161,7 +161,7 @@ static long nvt_aes_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 		break;
 
 	case AES_IOC_UPDATE_IV:
-		copy_to_user((unsigned char *)arg, (unsigned char *)&(crpt_regs->CRPT_AES_FDBCK[0]), 32);
+		copy_to_user((unsigned char *)arg, (unsigned char *)&(crpt_regs->CRPT_AES_FDBCK0), 32);
 		break;
 
 	default:
