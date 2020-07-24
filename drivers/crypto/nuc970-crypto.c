@@ -222,10 +222,10 @@ void dump_regs(void)
 	printk("CRPT_INTSTS = 0x%x\n", crpt_regs->CRPT_INTSTS);
 	printk("CRPT_AES_CTL = 0x%x\n", crpt_regs->CRPT_AES_CTL);
 	printk("CRPT_AES_STS = 0x%x\n", crpt_regs->CRPT_AES_STS);
-	printk("CRPT_AES0_KEY0 = 0x%x\n", crpt_regs->CRPT_AES0_KEY[0]);
-	printk("CRPT_AES0_KEY1 = 0x%x\n", crpt_regs->CRPT_AES0_KEY[1]);
-	printk("CRPT_AES0_KEY2 = 0x%x\n", crpt_regs->CRPT_AES0_KEY[2]);
-	printk("CRPT_AES0_KEY3 = 0x%x\n", crpt_regs->CRPT_AES0_KEY[3]);
+	printk("CRPT_AES0_KEY0 = 0x%x\n", crpt_regs->CRPT_AES0_KEY0);
+	printk("CRPT_AES0_KEY1 = 0x%x\n", crpt_regs->CRPT_AES0_KEY1);
+	printk("CRPT_AES0_KEY2 = 0x%x\n", crpt_regs->CRPT_AES0_KEY2);
+	printk("CRPT_AES0_KEY3 = 0x%x\n", crpt_regs->CRPT_AES0_KEY3);
 	printk("CRPT_AES0_SADDR = 0x%x\n", crpt_regs->CRPT_AES0_SADDR);
 	printk("CRPT_AES0_DADDR = 0x%x\n", crpt_regs->CRPT_AES0_DADDR);
 	printk("CRPT_AES0_CNT = 0x%x\n", crpt_regs->CRPT_AES0_CNT);
