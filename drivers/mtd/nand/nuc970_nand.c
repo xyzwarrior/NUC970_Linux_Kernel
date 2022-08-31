@@ -1081,7 +1081,7 @@ static int nuc970_nand_write_page(struct mtd_info *mtd, struct nand_chip *chip, 
 	if (unlikely(raw))
 	{
 		//chip->ecc.write_page_raw(mtd, chip, buf, 0);
-		chip->ecc.write_page_raw(mtd, chip, buf, oob_required, 0);
+		chip->ecc.write_page_raw(mtd, chip, buf, oob_required, page);
 	}
 	else
 	{
@@ -1097,7 +1097,7 @@ static int nuc970_nand_write_page(struct mtd_info *mtd, struct nand_chip *chip, 
 		}
 		else
 		{
-			nuc970_nand_write_page_hwecc ( mtd, chip, buf, oob_required );
+			nuc970_nand_write_page_hwecc ( mtd, chip, buf, oob_required, page );
 		}
 	}
 
