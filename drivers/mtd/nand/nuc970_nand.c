@@ -166,7 +166,8 @@ static void dump_chip_info( struct nand_chip * chip )
 	printk("chip->numchips: %d\n", chip->numchips );
 
 	printk("chip->subpagesize: %d\n", 1<<chip->subpagesize );
-	printk("chip->cellinfo: 0x%08X\n", chip->cellinfo );
+	//printk("chip->cellinfo: 0x%08X\n", chip->cellinfo );
+	printk("chip->bits_per_cell: 0x%08x\n", chip->bits_per_cell );
 
 	printk( "==========================\n" );
 }
@@ -950,7 +951,7 @@ static int nuc970_nand_calculate_ecc(struct mtd_info *mtd, const u_char *dat, u_
  * @chip:       nand chip info structure
  * @buf:        data buffer
  */
-static int nuc970_nand_write_page_hwecc(struct mtd_info *mtd, struct nand_chip *chip, const uint8_t *buf, int oob_required)
+static int nuc970_nand_write_page_hwecc(struct mtd_info *mtd, struct nand_chip *chip, const uint8_t *buf, int oob_required, int page)
 {
 	uint8_t *ecc_calc = chip->buffers->ecccalc;
 	uint32_t hweccbytes=chip->ecc.layout->eccbytes;
@@ -1078,7 +1079,10 @@ static int nuc970_nand_write_page(struct mtd_info *mtd, struct nand_chip *chip, 
 	nuc970_nand_command_lp(mtd, NAND_CMD_SEQIN, 0x00, page);
 
 	if (unlikely(raw))
-		chip->ecc.write_page_raw(mtd, chip, buf, 0);
+	{
+		//chip->ecc.write_page_raw(mtd, chip, buf, 0);
+		chip->ecc.write_page_raw(mtd, chip, buf, oob_required, 0);
+	}
 	else
 	{
 		if ( page >= 0 && page < (1<<(chip->phys_erase_shift+2)) / mtd->writesize ) // four blocks
