@@ -322,7 +322,9 @@ config CMA_ALIGNMENT
 
 	  If unsure, leave the default value "8".
 
-endifconfig FMI_NUC970
+endif
+
+config FMI_NUC970
 	tristate "Nuvoton NUC970/N9H30 FMI function selection"
 	depends on ARCH_NUC970
 	help
