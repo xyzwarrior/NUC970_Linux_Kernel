@@ -1,8 +1,7 @@
 /*
  * YAFFS: Yet Another Flash File System. A NAND-flash specific file system.
  *
- * Copyright (C) 2002-2011 Aleph One Ltd.
- *   for Toby Churchill Ltd and Brightstar Engineering
+ * Copyright (C) 2002-2018 Aleph One Ltd.
  *
  * Created by Charles Manning <charles@aleph1.co.uk>
  *
@@ -183,7 +182,7 @@ int yaffs_summary_read(struct yaffs_dev *dev,
 	u8 *buffer;
 	u8 *sum_buffer = (u8 *)st;
 	int n_bytes;
-	int chunk_id;
+	u32 chunk_id;
 	int chunk_in_nand;
 	int chunk_in_block;
 	int result;
@@ -191,10 +190,7 @@ int yaffs_summary_read(struct yaffs_dev *dev,
 	struct yaffs_summary_header hdr;
 	struct yaffs_block_info *bi = yaffs_get_block_info(dev, blk);
 	int sum_bytes_per_chunk = dev->data_bytes_per_chunk - sizeof(hdr);
-	int sum_tags_bytes;
 
-	sum_tags_bytes = sizeof(struct yaffs_summary_tags) *
-				dev->chunks_per_summary;
 	buffer = yaffs_get_temp_buffer(dev);
 	n_bytes = sizeof(struct yaffs_summary_tags) * dev->chunks_per_summary;
 	chunk_in_block = dev->chunks_per_summary;
@@ -259,8 +255,9 @@ int yaffs_summary_add(struct yaffs_dev *dev,
 		return YAFFS_OK;
 
 	if (chunk_in_block >= 0 && chunk_in_block < dev->chunks_per_summary) {
-		yaffs_pack_tags2_tags_only(&tags_only, tags);
+		yaffs_pack_tags2_tags_only(dev, &tags_only, tags);
 		sum_tags = &dev->sum_tags[chunk_in_block];
+
 		sum_tags->chunk_id = tags_only.chunk_id;
 		sum_tags->n_bytes = tags_only.n_bytes;
 		sum_tags->obj_id = tags_only.obj_id;
@@ -286,7 +283,7 @@ int yaffs_summary_fetch(struct yaffs_dev *dev,
 		tags_only.chunk_id = sum_tags->chunk_id;
 		tags_only.n_bytes = sum_tags->n_bytes;
 		tags_only.obj_id = sum_tags->obj_id;
-		yaffs_unpack_tags2_tags_only(tags, &tags_only);
+		yaffs_unpack_tags2_tags_only(dev, tags, &tags_only);
 		return YAFFS_OK;
 	}
 	return YAFFS_FAIL;
@@ -295,7 +292,7 @@ int yaffs_summary_fetch(struct yaffs_dev *dev,
 void yaffs_summary_gc(struct yaffs_dev *dev, int blk)
 {
 	struct yaffs_block_info *bi = yaffs_get_block_info(dev, blk);
-	int i;
+	u32 i;
 
 	if (!bi->has_summary)
 		return;

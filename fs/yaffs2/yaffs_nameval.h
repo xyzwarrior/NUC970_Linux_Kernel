@@ -1,8 +1,7 @@
 /*
  * YAFFS: Yet another Flash File System . A NAND-flash specific file system.
  *
- * Copyright (C) 2002-2011 Aleph One Ltd.
- *   for Toby Churchill Ltd and Brightstar Engineering
+ * Copyright (C) 2002-2018 Aleph One Ltd.
  *
  * Created by Charles Manning <charles@aleph1.co.uk>
  *
@@ -18,11 +17,16 @@
 
 #include "yportenv.h"
 
-int nval_del(char *xb, int xb_size, const YCHAR * name);
-int nval_set(char *xb, int xb_size, const YCHAR * name, const char *buf,
+struct yaffs_dev;
+
+int nval_del(struct yaffs_dev *dev, char *xb, int xb_size, const YCHAR * name);
+int nval_set(struct yaffs_dev *dev,
+	     char *xb, int xb_size, const YCHAR * name, const char *buf,
 	     int bsize, int flags);
-int nval_get(const char *xb, int xb_size, const YCHAR * name, char *buf,
+int nval_get(struct yaffs_dev *dev,
+	     const char *xb, int xb_size, const YCHAR * name, char *buf,
 	     int bsize);
-int nval_list(const char *xb, int xb_size, char *buf, int bsize);
-int nval_hasvalues(const char *xb, int xb_size);
+int nval_list(struct yaffs_dev *dev,
+	      const char *xb, int xb_size, char *buf, int bsize);
+int nval_hasvalues(struct yaffs_dev *dev, const char *xb, int xb_size);
 #endif

@@ -1,8 +1,7 @@
 /*
  * YAFFS: Yet Another Flash File System. A NAND-flash specific file system.
  *
- * Copyright (C) 2002-2011 Aleph One Ltd.
- *   for Toby Churchill Ltd and Brightstar Engineering
+ * Copyright (C) 2002-2018 Aleph One Ltd.
  *
  * Created by Charles Manning <charles@aleph1.co.uk>
  *
@@ -22,11 +21,13 @@
 #include "linux/kernel.h"
 #include "linux/version.h"
 #include "linux/types.h"
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0))
+#include "uapi/linux/major.h"
+#endif
 
 #include "yaffs_trace.h"
 #include "yaffs_guts.h"
 #include "yaffs_linux.h"
-
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 2, 0))
 #define MTD_OPS_AUTO_OOB MTD_OOB_AUTO

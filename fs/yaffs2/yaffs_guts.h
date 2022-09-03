@@ -1,8 +1,7 @@
 /*
  * YAFFS: Yet another Flash File System . A NAND-flash specific file system.
  *
- * Copyright (C) 2002-2011 Aleph One Ltd.
- *   for Toby Churchill Ltd and Brightstar Engineering
+ * Copyright (C) 2002-2018 Aleph One Ltd.
  *
  * Created by Charles Manning <charles@aleph1.co.uk>
  *
@@ -17,6 +16,7 @@
 #define __YAFFS_GUTS_H__
 
 #include "yportenv.h"
+
 #define YAFFS_OK	1
 #define YAFFS_FAIL  0
 
@@ -78,7 +78,6 @@
 
 /* Binary data version stamps */
 #define YAFFS_SUMMARY_VERSION		1
-#define YAFFS_CHECKPOINT_VERSION	7
 
 #ifdef CONFIG_YAFFS_UNICODE
 #define YAFFS_MAX_NAME_LENGTH		127
@@ -153,7 +152,8 @@ struct yaffs_tags {
 
 union yaffs_tags_union {
 	struct yaffs_tags as_tags;
-	u8 as_bytes[8];
+	u8  as_bytes[8];
+	u32 as_u32[2];
 };
 
 
@@ -165,6 +165,12 @@ enum yaffs_ecc_result {
 	YAFFS_ECC_RESULT_FIXED,
 	YAFFS_ECC_RESULT_UNFIXED
 };
+
+/*
+ * Object type enum:
+ * When this is stored in flash we store it as a u32 instead
+ * to prevent any alignment change issues as compiler variants change.
+ */
 
 enum yaffs_obj_type {
 	YAFFS_OBJECT_TYPE_UNKNOWN,
@@ -305,14 +311,19 @@ struct yaffs_block_info {
 
 };
 
+union yaffs_block_info_union {
+	struct yaffs_block_info bi;
+	u32	as_u32[2];
+};
+
 /* -------------------------- Object structure -------------------------------*/
 /* This is the object structure as stored on NAND */
 
 struct yaffs_obj_hdr {
-	enum yaffs_obj_type type;
+	u32 type;  /* enum yaffs_obj_type  */
 
 	/* Apply to everything  */
-	int parent_obj_id;
+	u32 parent_obj_id;
 	u16 sum_no_longer_used;	/* checksum of name. No longer used */
 	YCHAR name[YAFFS_MAX_NAME_LENGTH + 1];
 
@@ -367,9 +378,19 @@ struct yaffs_tnode {
  * - a hard link
  */
 
+/* The file variant has three file sizes:
+ *  - file_size : size of file as written into Yaffs - including data in cache.
+ *  - stored_size - size of file as stored on media.
+ *  - shrink_size - size of file that has been shrunk back to.
+ *
+ * The stored_size and file_size might be different because the data written
+ * into the cache will increase the file_size but the stored_size will only
+ * change when the data is actually stored.
+ *
+ */
 struct yaffs_file_var {
 	loff_t file_size;
-	loff_t scanned_size;
+	loff_t stored_size;
 	loff_t shrink_size;
 	int top_level;
 	struct yaffs_tnode *top;
@@ -469,7 +490,7 @@ struct yaffs_obj {
 
 	void *my_inode;
 
-	enum yaffs_obj_type variant_type;
+	u32 variant_type; /* enum yaffs_object_type */
 
 	union yaffs_obj_var variant;
 
@@ -480,26 +501,6 @@ struct yaffs_obj_bucket {
 	int count;
 };
 
-/* yaffs_checkpt_obj holds the definition of an object as dumped
- * by checkpointing.
- */
-
-struct yaffs_checkpt_obj {
-	int struct_type;
-	u32 obj_id;
-	u32 parent_id;
-	int hdr_chunk;
-	enum yaffs_obj_type variant_type:3;
-	u8 deleted:1;
-	u8 soft_del:1;
-	u8 unlinked:1;
-	u8 fake:1;
-	u8 rename_allowed:1;
-	u8 unlink_allowed:1;
-	u8 serial;
-	int n_data_chunks;
-	loff_t size_or_equiv_obj;
-};
 
 /*--------------------- Temporary buffers ----------------
  *
@@ -525,14 +526,14 @@ struct yaffs_param {
 	int inband_tags;	/* Use unband tags */
 	u32 total_bytes_per_chunk;	/* Should be >= 512, does not need to
 					 be a power of 2 */
-	int chunks_per_block;	/* does not need to be a power of 2 */
-	int spare_bytes_per_chunk;	/* spare area size */
-	int start_block;	/* Start block we're allowed to use */
-	int end_block;		/* End block we're allowed to use */
-	int n_reserved_blocks;	/* Tuneable so that we can reduce
+	u32 chunks_per_block;	/* does not need to be a power of 2 */
+	u32 spare_bytes_per_chunk;	/* spare area size */
+	u32 start_block;	/* Start block we're allowed to use */
+	u32 end_block;		/* End block we're allowed to use */
+	u32 n_reserved_blocks;	/* Tuneable so that we can reduce
 				 * reserved blocks on NOR and RAM. */
 
-	int n_caches;		/* If <= 0, then short op caching is disabled,
+	u32 n_caches;		/* If == 0, then short op caching is disabled,
 				 * else the number of short op caches.
 				 */
 	int cache_bypass_aligned; /* If non-zero then bypass the cache for
@@ -561,6 +562,10 @@ struct yaffs_param {
 				 * Set to limit the number of objects created.
 				 * 0 = no limit.
 				*/
+
+	int hide_lost_n_found;  /* Set non-zero to hide the lost-n-found dir. */
+
+	int stored_endian; /* 0=cpu endian, 1=little endian, 2=big endian */
 
 	/* The remove_obj_fn function must be supplied by OS flavours that
 	 * need it.
@@ -638,13 +643,15 @@ struct yaffs_dev {
 
 	int ll_init;
 	/* Runtime parameters. Set up by YAFFS. */
-	int data_bytes_per_chunk;
+	u32 data_bytes_per_chunk;
 
 	/* Non-wide tnode stuff */
 	u16 chunk_grp_bits;	/* Number of bits that need to be resolved if
 				 * the tnodes are not wide enough.
 				 */
 	u16 chunk_grp_size;	/* == 2^^chunk_grp_bits */
+
+	struct yaffs_tnode *tn_swap_buffer;
 
 	/* Stuff to support wide tnodes */
 	u32 tnode_width;
@@ -659,10 +666,11 @@ struct yaffs_dev {
 	int is_mounted;
 	int read_only;
 	int is_checkpointed;
+	int swap_endian;	/* Stored endian needs endian swap. */
 
 	/* Stuff to support block offsetting to support start block zero */
-	int internal_start_block;
-	int internal_end_block;
+	u32 internal_start_block;
+	u32 internal_end_block;
 	int block_offset;
 	int chunk_offset;
 
@@ -672,12 +680,12 @@ struct yaffs_dev {
 	int checkpt_byte_offs;
 	u8 *checkpt_buffer;
 	int checkpt_open_write;
-	int blocks_in_checkpt;
+	u32 blocks_in_checkpt;
 	int checkpt_cur_chunk;
 	int checkpt_cur_block;
 	int checkpt_next_block;
 	int *checkpt_block_list;
-	int checkpt_max_blocks;
+	u32 checkpt_max_blocks;
 	u32 checkpt_sum;
 	u32 checkpt_xor;
 
@@ -799,6 +807,37 @@ struct yaffs_dev {
 
 };
 
+/*
+ * Checkpointing definitions.
+ */
+
+#define YAFFS_CHECKPOINT_VERSION	8
+
+/* yaffs_checkpt_obj holds the definition of an object as dumped
+ * by checkpointing.
+ */
+
+
+/*  Checkpint object bits in bitfield: offset, length */
+#define CHECKPOINT_VARIANT_BITS		0, 3
+#define CHECKPOINT_DELETED_BITS		3, 1
+#define CHECKPOINT_SOFT_DEL_BITS	4, 1
+#define CHECKPOINT_UNLINKED_BITS	5, 1
+#define CHECKPOINT_FAKE_BITS		6, 1
+#define CHECKPOINT_RENAME_ALLOWED_BITS	7, 1
+#define CHECKPOINT_UNLINK_ALLOWED_BITS	8, 1
+#define CHECKPOINT_SERIAL_BITS		9, 8
+
+struct yaffs_checkpt_obj {
+	int struct_type;
+	u32 obj_id;
+	u32 parent_id;
+	int hdr_chunk;
+	u32 bit_field;
+	int n_data_chunks;
+	loff_t size_or_equiv_obj;
+};
+
 /* The CheckpointDevice structure holds the device information that changes
  *at runtime and must be preserved over unmount/mount cycles.
  */
@@ -852,6 +891,8 @@ int yaffs_get_n_free_chunks(struct yaffs_dev *dev);
 int yaffs_rename_obj(struct yaffs_obj *old_dir, const YCHAR * old_name,
 		     struct yaffs_obj *new_dir, const YCHAR * new_name);
 
+int yaffs_unlink_obj(struct yaffs_obj *obj);
+
 int yaffs_unlinker(struct yaffs_obj *dir, const YCHAR * name);
 int yaffs_del_obj(struct yaffs_obj *obj);
 struct yaffs_obj *yaffs_retype_obj(struct yaffs_obj *obj,
@@ -875,10 +916,13 @@ struct yaffs_obj *yaffs_create_file(struct yaffs_obj *parent,
 				    const YCHAR *name, u32 mode, u32 uid,
 				    u32 gid);
 
-int yaffs_flush_file(struct yaffs_obj *obj, int update_time, int data_sync);
+int yaffs_flush_file(struct yaffs_obj *in,
+		     int update_time,
+		     int data_sync,
+		     int discard_cache);
 
 /* Flushing and checkpointing */
-void yaffs_flush_whole_cache(struct yaffs_dev *dev);
+void yaffs_flush_whole_cache(struct yaffs_dev *dev, int discard);
 
 int yaffs_checkpoint_save(struct yaffs_dev *dev);
 int yaffs_checkpoint_restore(struct yaffs_dev *dev);
@@ -986,11 +1030,13 @@ int yaffs_guts_format_dev(struct yaffs_dev *dev);
 void yaffs_addr_to_chunk(struct yaffs_dev *dev, loff_t addr,
 				int *chunk_out, u32 *offset_out);
 /*
- * Marshalling functions to get loff_t file sizes into aand out of
+ * Marshalling functions to get loff_t file sizes into and out of
  * object headers.
  */
-void yaffs_oh_size_load(struct yaffs_obj_hdr *oh, loff_t fsize);
-loff_t yaffs_oh_to_size(struct yaffs_obj_hdr *oh);
+void yaffs_oh_size_load(struct yaffs_dev *dev, struct yaffs_obj_hdr *oh,
+			loff_t fsize, int do_endian);
+loff_t yaffs_oh_to_size(struct yaffs_dev *dev, struct yaffs_obj_hdr *oh,
+			int do_endian);
 loff_t yaffs_max_file_size(struct yaffs_dev *dev);
 
 /*
@@ -1002,5 +1048,22 @@ void yaffs_count_blocks_by_state(struct yaffs_dev *dev, int bs[10]);
 
 int yaffs_find_chunk_in_file(struct yaffs_obj *in, int inode_chunk,
 				    struct yaffs_ext_tags *tags);
+
+/*
+ * Define LOFF_T_32_BIT if a 32-bit LOFF_T is being used.
+ * Not serious if you get this wrong - you might just get some warnings.
+*/
+
+#ifdef  LOFF_T_32_BIT
+#define FSIZE_LOW(fsize) (fsize)
+#define FSIZE_HIGH(fsize) 0
+#define FSIZE_COMBINE(high, low) (low)
+#else
+#define FSIZE_LOW(fsize) ((fsize) & 0xffffffff)
+#define FSIZE_HIGH(fsize)(((fsize) >> 32) & 0xffffffff)
+#define FSIZE_COMBINE(high, low) ((((loff_t) (high)) << 32) | \
+					(((loff_t) (low)) & 0xFFFFFFFF))
+#endif
+
 
 #endif

@@ -1,8 +1,7 @@
 /*
  * YAFFS: Yet Another Flash File System. A NAND-flash specific file system.
  *
- * Copyright (C) 2002-2011 Aleph One Ltd.
- *   for Toby Churchill Ltd and Brightstar Engineering
+ * Copyright (C) 2002-2018 Aleph One Ltd.
  *
  * Created by Charles Manning <charles@aleph1.co.uk>
  *
@@ -19,7 +18,8 @@
 
 static inline u8 *yaffs_block_bits(struct yaffs_dev *dev, int blk)
 {
-	if (blk < dev->internal_start_block || blk > dev->internal_end_block) {
+	if (blk < (int)dev->internal_start_block ||
+	    blk > (int)dev->internal_end_block) {
 		yaffs_trace(YAFFS_TRACE_ERROR,
 			"BlockBits block %d is not valid",
 			blk);
@@ -31,8 +31,9 @@ static inline u8 *yaffs_block_bits(struct yaffs_dev *dev, int blk)
 
 void yaffs_verify_chunk_bit_id(struct yaffs_dev *dev, int blk, int chunk)
 {
-	if (blk < dev->internal_start_block || blk > dev->internal_end_block ||
-	    chunk < 0 || chunk >= dev->param.chunks_per_block) {
+	if (blk < (int)dev->internal_start_block ||
+	    blk > (int)dev->internal_end_block ||
+	    chunk < 0 || chunk >= (int)dev->param.chunks_per_block) {
 		yaffs_trace(YAFFS_TRACE_ERROR,
 			"Chunk Id (%d:%d) invalid",
 			blk, chunk);

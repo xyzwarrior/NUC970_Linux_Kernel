@@ -1,8 +1,7 @@
 /*
  * YAFFS: Yet Another Flash File System. A NAND-flash specific file system.
  *
- * Copyright (C) 2002-2011 Aleph One Ltd.
- *   for Toby Churchill Ltd and Brightstar Engineering
+ * Copyright (C) 2002-2018 Aleph One Ltd.
  *
  * Created by Charles Manning <charles@aleph1.co.uk>
  *
@@ -13,6 +12,7 @@
 
 #include "yaffs_checkptrw.h"
 #include "yaffs_getblockinfo.h"
+#include "yaffs_endian.h"
 
 struct yaffs_checkpt_chunk_hdr {
 	int version;
@@ -32,6 +32,18 @@ static int apply_block_offset(struct yaffs_dev *dev, int block)
 	return block - dev->block_offset;
 }
 
+
+static void yaffs2_do_endian_hdr(struct yaffs_dev *dev,
+				 struct yaffs_checkpt_chunk_hdr *hdr)
+{
+	if (!dev->swap_endian)
+		return;
+	hdr->version = swap_s32(hdr->version);
+	hdr->seq     = swap_s32(hdr->seq);
+	hdr->sum     = swap_u32(hdr->sum);
+	hdr->xor     = swap_u32(hdr->xor);
+}
+
 static void yaffs2_checkpt_init_chunk_hdr(struct yaffs_dev *dev)
 {
 	struct yaffs_checkpt_chunk_hdr hdr;
@@ -43,6 +55,7 @@ static void yaffs2_checkpt_init_chunk_hdr(struct yaffs_dev *dev)
 
 	dev->checkpt_byte_offs = sizeof(hdr);
 
+	yaffs2_do_endian_hdr(dev, &hdr);
 	memcpy(dev->checkpt_buffer, &hdr, sizeof(hdr));
 }
 
@@ -51,6 +64,7 @@ static int yaffs2_checkpt_check_chunk_hdr(struct yaffs_dev *dev)
 	struct yaffs_checkpt_chunk_hdr hdr;
 
 	memcpy(&hdr, dev->checkpt_buffer, sizeof(hdr));
+	yaffs2_do_endian_hdr(dev, &hdr);
 
 	dev->checkpt_byte_offs = sizeof(hdr);
 
@@ -72,7 +86,7 @@ static int yaffs2_checkpt_space_ok(struct yaffs_dev *dev)
 
 static int yaffs_checkpt_erase(struct yaffs_dev *dev)
 {
-	int i;
+	u32 i;
 
 	if (!dev->drv.drv_erase_fn)
 		return 0;
@@ -111,7 +125,7 @@ static int yaffs_checkpt_erase(struct yaffs_dev *dev)
 
 static void yaffs2_checkpt_find_erased_block(struct yaffs_dev *dev)
 {
-	int i;
+	u32 i;
 	int blocks_avail = dev->n_erased_blocks - dev->param.n_reserved_blocks;
 
 	yaffs_trace(YAFFS_TRACE_CHECKPOINT,
@@ -120,7 +134,7 @@ static void yaffs2_checkpt_find_erased_block(struct yaffs_dev *dev)
 		blocks_avail, dev->checkpt_next_block);
 
 	if (dev->checkpt_next_block >= 0 &&
-	    dev->checkpt_next_block <= dev->internal_end_block &&
+	    dev->checkpt_next_block <= (int)dev->internal_end_block &&
 	    blocks_avail > 0) {
 
 		for (i = dev->checkpt_next_block; i <= dev->internal_end_block;
@@ -145,7 +159,7 @@ static void yaffs2_checkpt_find_erased_block(struct yaffs_dev *dev)
 
 static void yaffs2_checkpt_find_block(struct yaffs_dev *dev)
 {
-	int i;
+	u32 i;
 	struct yaffs_ext_tags tags;
 
 	yaffs_trace(YAFFS_TRACE_CHECKPOINT,
@@ -195,7 +209,7 @@ static void yaffs2_checkpt_find_block(struct yaffs_dev *dev)
 
 int yaffs2_checkpt_open(struct yaffs_dev *dev, int writing)
 {
-	int i;
+	u32 i;
 
 	dev->checkpt_open_write = writing;
 
@@ -237,8 +251,9 @@ int yaffs2_checkpt_open(struct yaffs_dev *dev, int writing)
 	dev->blocks_in_checkpt = 0;
 	dev->checkpt_max_blocks =
 	    (dev->internal_end_block - dev->internal_start_block) / 16 + 2;
-	dev->checkpt_block_list =
-	    kmalloc(sizeof(int) * dev->checkpt_max_blocks, GFP_NOFS);
+	if (!dev->checkpt_block_list)
+		dev->checkpt_block_list =
+		      kmalloc(sizeof(int) * dev->checkpt_max_blocks, GFP_NOFS);
 
 	if (!dev->checkpt_block_list)
 		return 0;
@@ -303,7 +318,7 @@ static int yaffs2_checkpt_flush_buffer(struct yaffs_dev *dev)
 				       dev->checkpt_buffer, &tags);
 	dev->checkpt_page_seq++;
 	dev->checkpt_cur_chunk++;
-	if (dev->checkpt_cur_chunk >= dev->param.chunks_per_block) {
+	if (dev->checkpt_cur_chunk >= (int)dev->param.chunks_per_block) {
 		dev->checkpt_cur_chunk = 0;
 		dev->checkpt_cur_block = -1;
 	}
@@ -338,7 +353,7 @@ int yaffs2_checkpt_wr(struct yaffs_dev *dev, const void *data, int n_bytes)
 		dev->checkpt_byte_count++;
 
 		if (dev->checkpt_byte_offs < 0 ||
-		    dev->checkpt_byte_offs >= dev->data_bytes_per_chunk)
+		    dev->checkpt_byte_offs >= (int)dev->data_bytes_per_chunk)
 			ok = yaffs2_checkpt_flush_buffer(dev);
 	}
 
@@ -348,7 +363,6 @@ int yaffs2_checkpt_wr(struct yaffs_dev *dev, const void *data, int n_bytes)
 int yaffs2_checkpt_rd(struct yaffs_dev *dev, void *data, int n_bytes)
 {
 	int i = 0;
-	int ok = 1;
 	struct yaffs_ext_tags tags;
 	int chunk;
 	int offset_chunk;
@@ -360,20 +374,19 @@ int yaffs2_checkpt_rd(struct yaffs_dev *dev, void *data, int n_bytes)
 	if (dev->checkpt_open_write)
 		return -1;
 
-	while (i < n_bytes && ok) {
+	while (i < n_bytes) {
 
 		if (dev->checkpt_byte_offs < 0 ||
-		    dev->checkpt_byte_offs >= dev->data_bytes_per_chunk) {
+		    dev->checkpt_byte_offs >= (int)dev->data_bytes_per_chunk) {
 
 			if (dev->checkpt_cur_block < 0) {
 				yaffs2_checkpt_find_block(dev);
 				dev->checkpt_cur_chunk = 0;
 			}
 
-			if (dev->checkpt_cur_block < 0) {
-				ok = 0;
+			/* Bail out if we can't find a checpoint block */
+			if (dev->checkpt_cur_block < 0)
 				break;
-			}
 
 			chunk = dev->checkpt_cur_block *
 			    dev->param.chunks_per_block +
@@ -382,28 +395,27 @@ int yaffs2_checkpt_rd(struct yaffs_dev *dev, void *data, int n_bytes)
 			offset_chunk = apply_chunk_offset(dev, chunk);
 			dev->n_page_reads++;
 
-			/* read in the next chunk */
+			/* Read in the next chunk */
 			dev->tagger.read_chunk_tags_fn(dev,
 						offset_chunk,
 						dev->checkpt_buffer,
 						&tags);
 
-			if (tags.chunk_id != (dev->checkpt_page_seq + 1) ||
+			/* Bail out if the chunk is corrupted. */
+			if (tags.chunk_id != (u32)(dev->checkpt_page_seq + 1) ||
 			    tags.ecc_result > YAFFS_ECC_RESULT_FIXED ||
-			    tags.seq_number != YAFFS_SEQUENCE_CHECKPOINT_DATA) {
-				ok = 0;
+			    tags.seq_number != YAFFS_SEQUENCE_CHECKPOINT_DATA)
 				break;
-			}
-			if(!yaffs2_checkpt_check_chunk_hdr(dev)) {
-				ok = 0;
+
+			/* Bail out if it is not a checkpoint chunk. */
+			if(!yaffs2_checkpt_check_chunk_hdr(dev))
 				break;
-			}
 
 			dev->checkpt_page_seq++;
 			dev->checkpt_cur_chunk++;
 
 			if (dev->checkpt_cur_chunk >=
-					dev->param.chunks_per_block)
+					(int)dev->param.chunks_per_block)
 				dev->checkpt_cur_block = -1;
 
 		}
@@ -417,12 +429,12 @@ int yaffs2_checkpt_rd(struct yaffs_dev *dev, void *data, int n_bytes)
 		dev->checkpt_byte_count++;
 	}
 
-	return i;
+	return i; /* Number of bytes read */
 }
 
 int yaffs_checkpt_close(struct yaffs_dev *dev)
 {
-	int i;
+	u32 i;
 
 	if (dev->checkpt_open_write) {
 		if (dev->checkpt_byte_offs !=
@@ -435,14 +447,12 @@ int yaffs_checkpt_close(struct yaffs_dev *dev)
 			int blk = dev->checkpt_block_list[i];
 			struct yaffs_block_info *bi = NULL;
 
-			if (dev->internal_start_block <= blk &&
-			    blk <= dev->internal_end_block)
+			if ((int)dev->internal_start_block <= blk &&
+			    blk <= (int)dev->internal_end_block)
 				bi = yaffs_get_block_info(dev, blk);
 			if (bi && bi->block_state == YAFFS_BLOCK_STATE_EMPTY)
 				bi->block_state = YAFFS_BLOCK_STATE_CHECKPOINT;
 		}
-		kfree(dev->checkpt_block_list);
-		dev->checkpt_block_list = NULL;
 	}
 
 	dev->n_free_chunks -=
@@ -452,14 +462,10 @@ int yaffs_checkpt_close(struct yaffs_dev *dev)
 	yaffs_trace(YAFFS_TRACE_CHECKPOINT, "checkpoint byte count %d",
 		dev->checkpt_byte_count);
 
-	if (dev->checkpt_buffer) {
-		/* free the buffer */
-		kfree(dev->checkpt_buffer);
-		dev->checkpt_buffer = NULL;
+	if (dev->checkpt_buffer)
 		return 1;
-	} else {
+	else
 		return 0;
-	}
 }
 
 int yaffs2_checkpt_invalidate_stream(struct yaffs_dev *dev)
