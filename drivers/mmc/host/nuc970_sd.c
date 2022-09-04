@@ -1438,8 +1438,8 @@ static int nuc970_sd_suspend(struct platform_device *pdev, pm_message_t state)
     ENTRY();
     // For save, wait DMAC to ready
     while ( readl(REG_DMACCSR)      & 0x200 );
-    if (mmc)
-        ret = mmc_suspend_host(mmc);
+    //if (mmc)
+    //    ret = mmc_suspend_host(mmc);
     nuc900_sd_enable_sdio_irq(mmc, 0);
     nuc970_sd_disable(host);
     clk_disable(host->sd_clk);
@@ -1456,8 +1456,8 @@ static int nuc970_sd_resume(struct platform_device *pdev)
     clk_enable(host->sd_clk);
     nuc970_sd_enable(host);
     nuc900_sd_enable_sdio_irq(mmc, 1);
-    if (mmc)
-        ret = mmc_resume_host(mmc);
+    //if (mmc)
+    //    ret = mmc_resume_host(mmc);
     LEAVE();
     return ret;
 }

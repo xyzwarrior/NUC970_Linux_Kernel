@@ -406,6 +406,28 @@ config XILINX_XADC
 	  The driver can also be build as a module. If so, the module will be called
 	  xilinx-xadc.
 	  
+#config NUC970_NADC
+#	tristate "Nuvoton NUC970/N9H30 Normal ADC driver"
+#	depends on ARCH_NUC970
+#       select IIO_BUFFER
+#	select IIO_TRIGGERED_BUFFER
+#	help
+#	  Say yes here to build support for NUC970/N9H30 normal ADC.
+#choice
+#	prompt "Reference voltage selection"
+#	default NUC970_NADC_BANDGAP
+#	depends on NUC970_NADC
+#	help
+#        Select reference voltage source
+#
+#    config NUC970_NADC_BANDGAP
+#		bool "Internal bandgap, 2.5V"
+#    config NUC970_NADC_I33V
+#		bool "Internal AVDD, 3.3V"
+#	config NUC970_NADC_VREF
+#		bool "VREF input"
+#endchoice
+
 config IIO_NUC970ADC
        tristate "Nuvoton NUC970/N9H30 Normal ADC driver"
        depends on ARCH_NUC970

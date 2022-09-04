@@ -663,7 +663,7 @@ static int nuc970_ge2d_probe(struct platform_device *pdev)
 				return -ENOENT;
 	}
 
-	ret = request_irq(irq_num, nuc970_ge2d_interrupt, IRQF_DISABLED, pdev->name, NULL);
+	ret = request_irq(irq_num, nuc970_ge2d_interrupt, /*IRQF_DISABLED*/0, pdev->name, NULL);
 	if (ret) {
 		printk("request_irq(g2d) failed.\n");
 		return ret;

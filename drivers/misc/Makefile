@@ -56,3 +56,8 @@ obj-$(CONFIG_GENWQE)		+= genwqe/
 obj-$(CONFIG_ECHO)		+= echo/
 obj-$(CONFIG_VEXPRESS_SYSCFG)	+= vexpress-syscfg.o
 obj-$(CONFIG_CXL_BASE)		+= cxl/
+obj-$(CONFIG_NUC970_ETIMER)	+= nuc970-etimer.o
+obj-$(CONFIG_NUC970_GE2D)	+= nuc970_ge2d.o
+obj-$(CONFIG_NUC970_SC)		+= nuc970-sc.o sc-util.o sc-t0.o sc-t1.o
+obj-$(CONFIG_NUC970_EBI)	+= nuc970-ebi.o
+

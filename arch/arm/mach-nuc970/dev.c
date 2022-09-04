@@ -1157,7 +1157,8 @@ struct platform_device nuc970_device_ebi = {
 
 #if defined(CONFIG_PWM_NUC970) || defined(CONFIG_PWM_NUC970_MODULE)
 static struct pwm_lookup board_pwm_lookup[] = {
-	PWM_LOOKUP("nuc970-pwm", 0, "pwm-backlight", NULL),
+	//PWM_LOOKUP("nuc970-pwm", 0, "pwm-backlight", NULL),
+	PWM_LOOKUP("nuc970-pwm", 0, "pwm-backlight", NULL, 10000, PWM_POLARITY_NORMAL),
 };
 
 #if 0

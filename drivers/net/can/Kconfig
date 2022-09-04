@@ -155,6 +155,8 @@ source "drivers/net/can/c_can/Kconfig"
 
 source "drivers/net/can/m_can/Kconfig"
 
+source "drivers/net/can/nuc970_can/Kconfig"
+
 source "drivers/net/can/cc770/Kconfig"
 
 source "drivers/net/can/spi/Kconfig"

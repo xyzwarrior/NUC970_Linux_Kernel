@@ -1498,7 +1498,7 @@ static struct v4l2_file_operations jpegcodec_fops = {
     .read =   jpegcodec_read,
     .write =  jpegcodec_write,
     .poll =   NULL,
-    .ioctl =  jpegcodec_ioctl,
+    //.ioctl =  jpegcodec_ioctl,
     .unlocked_ioctl =  jpegcodec_ioctl,
     .mmap =   jpegcodec_mmap,   
     .get_unmapped_area = NULL,  
@@ -2421,7 +2421,7 @@ static int nuc970_jpegcodec_probe(struct platform_device *pdev)
     
     //ret = request_irq(IRQ_JPEG, jpegirq_handler, SA_INTERRUPT, "nuc970-jpeg", priv);
 
-    ret = request_irq(IRQ_JPEG, (irq_handler_t)jpegirq_handler, IRQF_DISABLED | IRQF_IRQPOLL, "nuc970-jpeg", priv);
+    ret = request_irq(IRQ_JPEG, (irq_handler_t)jpegirq_handler, /*IRQF_DISABLED |*/ IRQF_IRQPOLL, "nuc970-jpeg", priv);
 
     if (ret) {
         printk("cannot get irq %d - err %d\n", IRQ_JPEG, ret);

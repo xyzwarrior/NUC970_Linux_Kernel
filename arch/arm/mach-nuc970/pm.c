@@ -23,6 +23,8 @@
 #include <mach/regs-gcr.h>
 #include <mach/map.h>
 
+#include <linux/slab.h>
+
 #ifdef CONFIG_PM_SLEEP
 #define PM_FROM_SRAM
 

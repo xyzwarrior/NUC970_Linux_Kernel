@@ -915,8 +915,8 @@ static int nuc970_emmc_suspend(struct platform_device *pdev, pm_message_t state)
 
 	// For save, wait DMAC to ready
 	while (	readl(REG_NAND_DMACCSR)	& 0x200	);
-    if (mmc)
-        ret = mmc_suspend_host(mmc);
+    //if (mmc)
+    //    ret = mmc_suspend_host(mmc);
     nuc970_emmc_disable(host);
     clk_disable(host->emmc_clk);
 
@@ -931,8 +931,8 @@ static int nuc970_emmc_resume(struct platform_device *pdev)
 
     clk_enable(host->emmc_clk);
 	nuc970_emmc_enable(host);
-    if (mmc)
-        ret = mmc_resume_host(mmc);
+    //if (mmc)
+    //    ret = mmc_resume_host(mmc);
 
     return ret;
 }

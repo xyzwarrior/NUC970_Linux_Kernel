@@ -1914,7 +1914,8 @@ static int nuc970_udc_probe(struct platform_device *pdev)
 		error = -ENXIO;
 		goto fail2;
 	}
-	error = request_irq(udc->irq, nuc970_udc_irq, IRQF_DISABLED, gadget_name, udc);
+	error = request_irq(udc->irq, nuc970_udc_irq,
+	/*IRQF_DISABLED*/0, gadget_name, udc);
 	if (error != 0)
 	{
 		dev_err(dev, "request_irq() failed\n");

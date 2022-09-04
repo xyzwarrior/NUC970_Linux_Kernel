@@ -784,12 +784,12 @@ static int nuc970adc_read_raw(struct iio_dev *indio_dev,
 static int nuc970adc_ring_preenable(struct iio_dev *indio_dev)
 {
 #ifdef CONFIG_IIO_NUC970ADC
-	int ret;
-	ENTRY();
-	ret = iio_sw_buffer_preenable(indio_dev);
-	if (ret < 0)
-		return ret;
-	LEAVE();
+	//int ret;
+	//ENTRY();
+	//ret = iio_sw_buffer_preenable(indio_dev);
+	//if (ret < 0)
+	//	return ret;
+	//LEAVE();
 #endif
 	return 0;
 }
